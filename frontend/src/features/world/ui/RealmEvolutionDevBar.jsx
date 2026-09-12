@@ -14,7 +14,7 @@ export default function RealmEvolutionDevBar({
   activeRegion,
   onSelectRegion,
 }) {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
 
   const realms = [
     {
@@ -49,7 +49,7 @@ export default function RealmEvolutionDevBar({
       <button
         type="button"
         onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center space-x-1.5 px-2.5 py-1 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-indigo-300 hover:text-indigo-200 border border-indigo-500/40 backdrop-blur-md shadow-xl text-xs font-semibold transition-all group"
+        className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-indigo-300 hover:text-indigo-200 border border-indigo-500/40 backdrop-blur-md shadow-xl text-xs font-semibold transition-all group"
         title="Toggle Realm Evolution Test Controls"
       >
         <Sparkles className="w-3.5 h-3.5 text-indigo-400 group-hover:rotate-12 transition-transform" />

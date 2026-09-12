@@ -159,7 +159,7 @@ export default function WorldCanvas({
       </Suspense>
 
       {/* Floating Top Controls: Celestial Clock HUD, Return to World & Dev Bar */}
-      <div className="absolute top-3 left-4 md:left-52 flex items-center space-x-2 pointer-events-none z-10">
+      <div className="absolute top-3 left-4 md:left-52 flex items-center space-x-2 pointer-events-none z-20">
         <GameClockWidget />
 
         {isRealmFocused && (
