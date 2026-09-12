@@ -6,6 +6,8 @@
   body {
     margin: 0;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: #060813;
+    color: #f1f5f9;
     overflow-x: hidden;
   }
 
@@ -14,33 +16,60 @@
   }
 }
 
-/* Glassmorphism RPG Card */
+/* Premium Glassmorphic RPG Panels */
 .glass-panel {
-  background: rgba(22, 27, 34, 0.75);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(13, 18, 33, 0.82);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
 }
 
 .glass-panel-glow {
-  background: rgba(22, 27, 34, 0.85);
-  backdrop-filter: blur(16px);
-  border: 1px solid rgba(88, 166, 255, 0.25);
-  box-shadow: 0 0 20px rgba(56, 189, 248, 0.15);
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  box-shadow: 0 0 25px rgba(99, 102, 241, 0.15), 0 10px 30px -10px rgba(0, 0, 0, 0.6);
 }
 
-/* Custom Scrollbar for RPG panels */
+/* Subtle Animated Ambient Glows */
+@keyframes pulse-subtle {
+  0%, 100% {
+    opacity: 0.85;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 4s ease-in-out infinite;
+}
+
+/* Custom Scrollbar for RPG Panels */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #0d1117;
+  background: #090d19;
 }
 ::-webkit-scrollbar-thumb {
-  background: #30363d;
-  border-radius: 3px;
+  background: #252e46;
+  border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #58a6ff;
+  background: #4f46e5;
 }
+
+/* Hide scrollbar utility */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
