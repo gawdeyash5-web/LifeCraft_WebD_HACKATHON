@@ -14,6 +14,7 @@ export default function RightOverlayDrawer({
   isOpen = true,
   onToggle,
   onOpenStats,
+  onOpenQuests,
 }) {
   const [quests, setQuests] = useState([
     {
@@ -94,6 +95,7 @@ export default function RightOverlayDrawer({
           </div>
           <button
             type="button"
+            onClick={onOpenQuests}
             className="group px-2.5 py-1 rounded-lg bg-slate-800/70 hover:bg-slate-700/80 active:bg-slate-700 border border-slate-700/60 hover:border-indigo-500/50 text-[11px] font-semibold text-slate-300 hover:text-white transition-all shadow-sm flex items-center space-x-1 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
           >
             <span>View All</span>
@@ -158,6 +160,7 @@ export default function RightOverlayDrawer({
         {/* Add Quest Action Button */}
         <button
           type="button"
+          onClick={onOpenQuests}
           className="w-full py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/60 text-xs font-semibold text-slate-200 hover:text-white transition flex items-center justify-center space-x-1.5 shadow-sm"
         >
           <Plus className="w-3.5 h-3.5" />

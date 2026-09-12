@@ -6,6 +6,7 @@ import BottomRealmDock from './components/BottomRealmDock';
 import WorldCanvas from './features/world/WorldCanvas';
 import PlayerStatsPlaceholder from './features/player/PlayerStatsPlaceholder';
 import ShopPlaceholder from './features/economy/ShopPlaceholder';
+import QuestListPlaceholder from './features/quests/QuestListPlaceholder';
 import CloseButton from './components/CloseButton';
 import { INITIAL_PLAYER_STATE, REGIONS } from './utils/contracts';
 import useRealmLevels from './features/world/hooks/useRealmLevels';
@@ -104,6 +105,7 @@ export default function App() {
           activeRegion={activeRegion}
           onCompleteQuest={handleCompleteQuest}
           onOpenStats={() => setActiveTab('stats')}
+          onOpenQuests={() => setActiveTab('quests')}
         />
 
         {/* 5. Floating Bottom Dock: 3 Realm Preview Cards & Utilities (Matching Reference) */}
@@ -116,8 +118,8 @@ export default function App() {
           onOpenAchievements={() => setActiveTab('achievements')}
         />
 
-        {/* Modal Overlay for Realm Shop or Character Stats */}
-        {(activeTab === 'shop' || activeTab === 'stats') && (
+        {/* Modal Overlay for Realm Shop, Character Stats, or Quests */}
+        {(activeTab === 'shop' || activeTab === 'stats' || activeTab === 'quests') && (
           <div
             role="dialog"
             aria-modal="true"
@@ -126,7 +128,7 @@ export default function App() {
           >
             <div
               onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-md flex flex-col items-end"
+              className={`relative w-full ${activeTab === 'quests' ? 'max-w-2xl' : 'max-w-md'} flex flex-col items-end`}
             >
               {/* Standalone clean Close Button positioned above panel - 100% visible, never clipped */}
               <div className="mb-2">
@@ -142,6 +144,12 @@ export default function App() {
                 {activeTab === 'stats' && (
                   <PlayerStatsPlaceholder
                     player={player}
+                  />
+                )}
+                {activeTab === 'quests' && (
+                  <QuestListPlaceholder
+                    activeRegion={activeRegion}
+                    onCompleteQuest={handleCompleteQuest}
                   />
                 )}
               </div>
