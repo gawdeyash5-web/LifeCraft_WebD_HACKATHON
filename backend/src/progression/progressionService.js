@@ -203,12 +203,31 @@ export const calculateQuestCompletionProgression = ({
     currentDate,
   });
 
+  // Calculate updated attributes & realm levels
+  const currentAttributes = playerState.attributes || {};
+  const updatedAttributes = {
+    intelligence: Number(currentAttributes.intelligence) || 10,
+    wisdom: Number(currentAttributes.wisdom) || 10,
+    strength: Number(currentAttributes.strength) || 10,
+    discipline: Number(currentAttributes.discipline) || 10,
+    creativity: Number(currentAttributes.creativity) || 10,
+  };
+
+  const targetAttr = attributePointsAwarded.attribute;
+  if (targetAttr && updatedAttributes[targetAttr] !== undefined) {
+    updatedAttributes[targetAttr] += attributePointsAwarded.amount;
+  }
+
+  const realmLevels = calculateRealmLevels(updatedAttributes);
+
   return {
     xpGained,
     totalXp,
     level: levelInfo.level,
     leveledUp,
     attributePointsAwarded,
+    updatedAttributes,
+    realmLevels,
     streak: streakInfo.streak,
     streakType: streakInfo.streakType,
     currentLevelBaseXp: levelInfo.currentLevelBaseXp,
@@ -216,3 +235,127 @@ export const calculateQuestCompletionProgression = ({
     progressPercent: levelInfo.progressPercent,
   };
 };
+
+/**
+ * Realm Attribute Mapping (Agreed System)
+ * MIND: Intelligence, Wisdom
+ * BODY: Strength, Discipline
+ * CRAFT: Creativity
+ */
+export const REALM_ATTRIBUTE_MAPPING = {
+  mind: ['intelligence', 'wisdom'],
+  body: ['strength', 'discipline'],
+  craft: ['creativity'],
+};
+
+/**
+ * Calculates Realm Levels for 3D world consumption.
+ * 
+ * Mapping:
+ * - MIND: intelligence, wisdom
+ * - BODY: strength, discipline
+ * - CRAFT: creativity
+ * 
+ * Returns: { mindLevel, bodyLevel, craftLevel }
+ * 
+ * @param {object} attributes - Player attribute map (e.g. { intelligence, wisdom, strength, discipline, creativity })
+ * @returns {{ mindLevel: number, bodyLevel: number, craftLevel: number }}
+ */
+export const calculateRealmLevels = (attributes = {}) => {
+  const intel = Math.max(0, Number(attributes?.intelligence) || 0);
+  const wis = Math.max(0, Number(attributes?.wisdom) || 0);
+  const str = Math.max(0, Number(attributes?.strength) || 0);
+  const disc = Math.max(0, Number(attributes?.discipline) || 0);
+  const creat = Math.max(0, Number(attributes?.creativity) || 0);
+
+  // Normalized realm power:
+  // Mind: average of intelligence and wisdom
+  // Body: average of strength and discipline
+  // Craft: creativity
+  const mindPower = (intel + wis) / 2;
+  const bodyPower = (str + disc) / 2;
+  const craftPower = creat;
+
+  // Level 1 base, increments every 10 points (e.g., 0-19: lvl 1, 20-29: lvl 2, etc.)
+  const mindLevel = Math.max(1, Math.floor(mindPower / 10));
+  const bodyLevel = Math.max(1, Math.floor(bodyPower / 10));
+  const craftLevel = Math.max(1, Math.floor(craftPower / 10));
+
+  return {
+    mindLevel,
+    bodyLevel,
+    craftLevel,
+  };
+};
+
+/**
+ * Calculates attribute decay based on days of inactivity.
+ * Grace period: default 3 days.
+ * Pure calculation: never mutates inputs, floors attributes at minFloor (default 10).
+ * 
+ * @param {{ attributes?: object, lastActiveDate?: string|Date|null, currentDate?: string|Date, graceDays?: number, decayRate?: number, minFloor?: number }} options
+ * @returns {{ decayedAttributes: object, pointsDeducted: number, daysInactive: number, decayApplied: boolean }}
+ */
+export const calculateDecay = ({
+  attributes = {},
+  lastActiveDate = null,
+  currentDate = new Date(),
+  graceDays = 3,
+  decayRate = 1,
+  minFloor = 10,
+} = {}) => {
+  if (!lastActiveDate) {
+    return {
+      decayedAttributes: { ...attributes },
+      pointsDeducted: 0,
+      daysInactive: 0,
+      decayApplied: false,
+    };
+  }
+
+  const curr = new Date(currentDate);
+  const last = new Date(lastActiveDate);
+  if (isNaN(curr.getTime()) || isNaN(last.getTime())) {
+    return {
+      decayedAttributes: { ...attributes },
+      pointsDeducted: 0,
+      daysInactive: 0,
+      decayApplied: false,
+    };
+  }
+
+  const currUtcDay = Math.floor(Date.UTC(curr.getUTCFullYear(), curr.getUTCMonth(), curr.getUTCDate()) / 86400000);
+  const lastUtcDay = Math.floor(Date.UTC(last.getUTCFullYear(), last.getUTCMonth(), last.getUTCDate()) / 86400000);
+  const daysInactive = Math.max(0, currUtcDay - lastUtcDay);
+
+  if (daysInactive <= graceDays) {
+    return {
+      decayedAttributes: { ...attributes },
+      pointsDeducted: 0,
+      daysInactive,
+      decayApplied: false,
+    };
+  }
+
+  const overdueDays = daysInactive - graceDays;
+  const decayAmount = overdueDays * decayRate;
+  let pointsDeducted = 0;
+
+  const decayedAttributes = {};
+  const attributeKeys = ['intelligence', 'wisdom', 'strength', 'discipline', 'creativity'];
+
+  for (const attr of attributeKeys) {
+    const currentVal = Math.max(minFloor, Number(attributes[attr]) || minFloor);
+    const newVal = Math.max(minFloor, currentVal - decayAmount);
+    pointsDeducted += (currentVal - newVal);
+    decayedAttributes[attr] = newVal;
+  }
+
+  return {
+    decayedAttributes,
+    pointsDeducted,
+    daysInactive,
+    decayApplied: pointsDeducted > 0,
+  };
+};
+

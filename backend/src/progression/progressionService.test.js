@@ -5,6 +5,9 @@ import {
   calculateRewardsForQuest,
   calculateStreak,
   calculateQuestCompletionProgression,
+  calculateRealmLevels,
+  calculateDecay,
+  REALM_ATTRIBUTE_MAPPING,
 } from './progressionService.js';
 
 console.log('--- Running Progression Service Tests ---');
@@ -138,6 +141,95 @@ assert.strictEqual(completionResult.leveledUp, true);
 assert.strictEqual(completionResult.streak, 3);
 assert.strictEqual(completionResult.attributePointsAwarded.attribute, 'strength');
 assert.strictEqual(completionResult.attributePointsAwarded.amount, 2);
+assert.ok(completionResult.realmLevels, 'Completion result must contain realmLevels');
+assert.ok('mindLevel' in completionResult.realmLevels, 'realmLevels must contain mindLevel');
+assert.ok('bodyLevel' in completionResult.realmLevels, 'realmLevels must contain bodyLevel');
+assert.ok('craftLevel' in completionResult.realmLevels, 'realmLevels must contain craftLevel');
 console.log('✔ calculateQuestCompletionProgression tests passed');
+
+// 6. Test calculateRealmLevels and REALM_ATTRIBUTE_MAPPING (Steps 7 & 8)
+assert.deepStrictEqual(REALM_ATTRIBUTE_MAPPING.mind, ['intelligence', 'wisdom']);
+assert.deepStrictEqual(REALM_ATTRIBUTE_MAPPING.body, ['strength', 'discipline']);
+assert.deepStrictEqual(REALM_ATTRIBUTE_MAPPING.craft, ['creativity']);
+
+// Base starting stats (all 10)
+const baseRealmLevels = calculateRealmLevels({
+  intelligence: 10,
+  wisdom: 10,
+  strength: 10,
+  discipline: 10,
+  creativity: 10,
+});
+assert.strictEqual(baseRealmLevels.mindLevel, 1, 'Mind level 1 for 10 avg attribute points');
+assert.strictEqual(baseRealmLevels.bodyLevel, 1, 'Body level 1 for 10 avg attribute points');
+assert.strictEqual(baseRealmLevels.craftLevel, 1, 'Craft level 1 for 10 creativity attribute points');
+
+// Advanced stats
+const advancedRealmLevels = calculateRealmLevels({
+  intelligence: 25,
+  wisdom: 15, // Mind power = (25 + 15) / 2 = 20 -> Level 2
+  strength: 32,
+  discipline: 28, // Body power = (32 + 28) / 2 = 30 -> Level 3
+  creativity: 44, // Craft power = 44 -> Level 4
+});
+assert.strictEqual(advancedRealmLevels.mindLevel, 2);
+assert.strictEqual(advancedRealmLevels.bodyLevel, 3);
+assert.strictEqual(advancedRealmLevels.craftLevel, 4);
+
+// Edge cases (empty / null attributes)
+const emptyRealmLevels = calculateRealmLevels(null);
+assert.strictEqual(emptyRealmLevels.mindLevel, 1);
+assert.strictEqual(emptyRealmLevels.bodyLevel, 1);
+assert.strictEqual(emptyRealmLevels.craftLevel, 1);
+console.log('✔ calculateRealmLevels tests passed');
+
+// 7. Test calculateDecay (Step 12)
+const sampleAttrs = {
+  intelligence: 18,
+  wisdom: 16,
+  strength: 20,
+  discipline: 15,
+  creativity: 22,
+};
+
+// Within grace period (2 days < 3 days grace)
+const noDecay = calculateDecay({
+  attributes: sampleAttrs,
+  lastActiveDate: new Date('2026-09-10T12:00:00Z'),
+  currentDate: new Date('2026-09-12T12:00:00Z'),
+  graceDays: 3,
+});
+assert.strictEqual(noDecay.decayApplied, false);
+assert.strictEqual(noDecay.pointsDeducted, 0);
+assert.strictEqual(noDecay.daysInactive, 2);
+assert.strictEqual(noDecay.decayedAttributes.intelligence, 18);
+
+// Beyond grace period (5 days inactive = 2 overdue days * 1 point/day = 2 points deducted per attribute)
+const decayed = calculateDecay({
+  attributes: sampleAttrs,
+  lastActiveDate: new Date('2026-09-07T12:00:00Z'),
+  currentDate: new Date('2026-09-12T12:00:00Z'),
+  graceDays: 3,
+  decayRate: 1,
+  minFloor: 10,
+});
+assert.strictEqual(decayed.decayApplied, true);
+assert.strictEqual(decayed.daysInactive, 5);
+assert.strictEqual(decayed.decayedAttributes.intelligence, 16);
+assert.strictEqual(decayed.decayedAttributes.creativity, 20);
+
+// Protected by minimum floor (cannot decay below 10)
+const floorProtection = calculateDecay({
+  attributes: { intelligence: 11, wisdom: 10, strength: 10, discipline: 10, creativity: 10 },
+  lastActiveDate: new Date('2026-08-01T12:00:00Z'),
+  currentDate: new Date('2026-09-12T12:00:00Z'),
+  graceDays: 3,
+  decayRate: 1,
+  minFloor: 10,
+});
+assert.strictEqual(floorProtection.decayedAttributes.intelligence, 10);
+assert.strictEqual(floorProtection.decayedAttributes.wisdom, 10);
+assert.strictEqual(floorProtection.decayedAttributes.strength, 10);
+console.log('✔ calculateDecay tests passed');
 
 console.log('All progression tests passed successfully!');

@@ -329,6 +329,7 @@ export const completeQuest = async (req, res, next) => {
         streak: progression.streak,
         leveledUp: progression.leveledUp,
       },
+      realmLevels: progression.realmLevels,
       progression,
     }, 200, 'Quest completed successfully');
   } catch (err) {
