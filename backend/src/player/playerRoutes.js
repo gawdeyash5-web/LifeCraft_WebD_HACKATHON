@@ -5,8 +5,7 @@ import { requireAuth } from '../middleware/authMiddleware.js';
 const router = Router();
 
 // Routes owned by Member 3
-// Note: When Member 3 finishes auth testing, add requireAuth to these routes
-router.get('/me', getPlayerProfile);
-router.patch('/region', updatePlayerRegion);
+router.get('/me', requireAuth, getPlayerProfile);
+router.patch('/region', requireAuth, updatePlayerRegion);
 
 export default router;
