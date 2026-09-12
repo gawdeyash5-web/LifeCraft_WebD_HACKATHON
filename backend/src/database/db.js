@@ -1,7 +1,13 @@
 import pg from 'pg';
 import dotenv from 'dotenv';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const { Pool } = pg;
 
@@ -18,6 +24,22 @@ export const pool = new Pool({
  * Usage: const { rows } = await query('SELECT * FROM users WHERE id = $1', [userId]);
  */
 export const query = (text, params) => pool.query(text, params);
+
+/**
+ * Initialize database tables and initial seed from schema.sql
+ */
+export const initDatabaseSchema = async () => {
+  try {
+    const schemaPath = path.join(__dirname, 'schema.sql');
+    const sql = fs.readFileSync(schemaPath, 'utf8');
+    await pool.query(sql);
+    console.log('[Database] Schema initialized successfully.');
+    return true;
+  } catch (err) {
+    console.error('[Database] Failed to initialize schema:', err.message);
+    return false;
+  }
+};
 
 /**
  * Check database connection status on startup

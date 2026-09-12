@@ -19,7 +19,10 @@ export const requireAuth = (req, res, next) => {
   try {
     const secret = process.env.JWT_SECRET || 'hackathon_default_secret';
     const decoded = jwt.verify(token, secret);
-    req.user = decoded;
+    req.user = {
+      ...decoded,
+      userId: decoded.userId || decoded.id,
+    };
     next();
   } catch (err) {
     return errorResponse(res, 'Invalid or expired authentication token', 401, 'INVALID_TOKEN');
