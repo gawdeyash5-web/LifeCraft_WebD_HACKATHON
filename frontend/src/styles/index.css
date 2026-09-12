@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    margin: 0;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, .font-rpg {
+    font-family: 'Cinzel', serif;
+  }
+}
+
+/* Glassmorphism RPG Card */
+.glass-panel {
+  background: rgba(22, 27, 34, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-panel-glow {
+  background: rgba(22, 27, 34, 0.85);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(88, 166, 255, 0.25);
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.15);
+}
+
+/* Custom Scrollbar for RPG panels */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0d1117;
+}
+::-webkit-scrollbar-thumb {
+  background: #30363d;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #58a6ff;
+}
