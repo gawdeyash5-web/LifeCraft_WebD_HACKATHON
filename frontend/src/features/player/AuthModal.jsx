@@ -3,8 +3,8 @@ import { Api } from '../../services/api';
 import { X, Lock, Mail, User, ShieldCheck, AlertCircle } from 'lucide-react';
 
 /**
- * AuthModal (Owned by Member 3)
- * Provides authentication modal for Player subsystem to connect with PostgreSQL.
+ * Hero Authentication Modal
+ * Provides account creation and login for persistent player progression.
  */
 export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
   const [mode, setMode] = useState('login'); // 'login' | 'register'

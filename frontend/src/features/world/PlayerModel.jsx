@@ -1,28 +1,19 @@
-import React, { useEffect, useRef, useMemo } from 'react';
+import React, { useEffect, useRef, useMemo, Suspense } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useGLTF, useAnimations } from '@react-three/drei';
 import * as THREE from 'three';
-import { PLAYER } from './assets';
+import { PLAYER, SKINS, PETS } from './assets';
 import { WORLD_CONFIG, REALMS } from './worldConfig';
 
 /**
- * Autonomous Living Player Character
- * 
- * Synchronized interpolated waypoint navigation:
- * - Rotates towards destination
- * - Plays continuous walk animation
- * - Smoothly decelerates on arrival
- * - Blends into idle animation
- * - Faces landmark on arrival
+ * Animated Character Visual Mesh with Smooth Idle/Walk Transitions
  */
-export default function PlayerModel({ activeRegion }) {
-  const groupRef = useRef();
-  const currentPos = useRef(new THREE.Vector3(...WORLD_CONFIG.waypoints.center));
+function CharacterVisual({ skinUrl, isMoving }) {
+  const meshRef = useRef();
   const currentAnim = useRef('idle');
+  const { scene, animations } = useGLTF(skinUrl);
+  const { actions, names } = useAnimations(animations, meshRef);
 
-  const { scene, animations } = useGLTF(PLAYER);
-
-  // Apply shadows directly to GLB scene hierarchy (preserves bone bindings for SkinnedMesh)
   useEffect(() => {
     scene.traverse((child) => {
       if (child.isMesh) {
@@ -32,10 +23,6 @@ export default function PlayerModel({ activeRegion }) {
     });
   }, [scene]);
 
-  // Skeletal animations from GLB attached to the group root
-  const { actions, names } = useAnimations(animations, groupRef);
-
-  // Initialize idle animation on mount
   useEffect(() => {
     if (!actions) return;
     const idleAction = actions['idle'] || actions[names?.[0]];
@@ -43,7 +30,137 @@ export default function PlayerModel({ activeRegion }) {
       idleAction.reset().fadeIn(0.2).play();
       currentAnim.current = 'idle';
     }
-  }, [actions, names]);
+    return () => {
+      if (actions) {
+        Object.values(actions).forEach((a) => a?.stop());
+      }
+    };
+  }, [actions, names, skinUrl]);
+
+  useEffect(() => {
+    if (!actions) return;
+    if (isMoving && currentAnim.current !== 'walk') {
+      const walkAction = actions['walk'] || actions['sprint'];
+      const idleAction = actions['idle'];
+      if (walkAction) {
+        walkAction.reset().fadeIn(0.2).play();
+        if (idleAction) idleAction.fadeOut(0.2);
+        currentAnim.current = 'walk';
+      }
+    } else if (!isMoving && currentAnim.current !== 'idle') {
+      const walkAction = actions['walk'] || actions['sprint'];
+      const idleAction = actions['idle'];
+      if (idleAction) {
+        idleAction.reset().fadeIn(0.3).play();
+        if (walkAction) walkAction.fadeOut(0.3);
+        currentAnim.current = 'idle';
+      }
+    }
+  }, [isMoving, actions]);
+
+  return (
+    <group ref={meshRef}>
+      <primitive object={scene} />
+    </group>
+  );
+}
+
+/**
+ * Animated Companion Pet
+ */
+function CompanionPet({ petUrl, isMoving }) {
+  const petRef = useRef();
+  const currentAnim = useRef('idle');
+  const { scene, animations } = useGLTF(petUrl);
+  const { actions, names } = useAnimations(animations, petRef);
+
+  useEffect(() => {
+    scene.traverse((child) => {
+      if (child.isMesh) {
+        child.castShadow = true;
+        child.receiveShadow = true;
+      }
+    });
+  }, [scene]);
+
+  useEffect(() => {
+    if (!actions) return;
+    const idleAction = actions['idle'] || actions[names?.[0]];
+    if (idleAction) {
+      idleAction.reset().fadeIn(0.2).play();
+      currentAnim.current = 'idle';
+    }
+    return () => {
+      if (actions) {
+        Object.values(actions).forEach((a) => a?.stop());
+      }
+    };
+  }, [actions, names, petUrl]);
+
+  useEffect(() => {
+    if (!actions) return;
+    if (isMoving && currentAnim.current !== 'walk') {
+      const walkAction = actions['run'] || actions['walk'];
+      const idleAction = actions['idle'];
+      if (walkAction) {
+        walkAction.reset().fadeIn(0.2).play();
+        if (idleAction) idleAction.fadeOut(0.2);
+        currentAnim.current = 'walk';
+      }
+    } else if (!isMoving && currentAnim.current !== 'idle') {
+      const walkAction = actions['run'] || actions['walk'];
+      const idleAction = actions['idle'];
+      if (idleAction) {
+        idleAction.reset().fadeIn(0.3).play();
+        if (walkAction) walkAction.fadeOut(0.3);
+        currentAnim.current = 'idle';
+      }
+    }
+  }, [isMoving, actions]);
+
+  // Subtle pet bounce / position offset
+  useFrame((state) => {
+    if (!petRef.current) return;
+    const t = state.clock.elapsedTime;
+    if (!isMoving) {
+      petRef.current.position.y = Math.sin(t * 3.5) * 0.02;
+    }
+  });
+
+  return (
+    <group
+      ref={petRef}
+      position={[0.65, 0, -0.35]}
+      rotation={[0, -0.35, 0]}
+      scale={0.52}
+    >
+      <primitive object={scene} />
+    </group>
+  );
+}
+
+/**
+ * Autonomous Living Player Character with Dynamic Skin & Companion Pet
+ */
+export default function PlayerModel({
+  activeRegion,
+  equippedSkin = null,
+  equippedPet = null,
+}) {
+  const groupRef = useRef();
+  const currentPos = useRef(new THREE.Vector3(...WORLD_CONFIG.waypoints.center));
+  const [isMoving, setIsMoving] = React.useState(false);
+
+  // Determine skin and pet GLB paths
+  const resolvedSkinUrl = useMemo(() => {
+    if (equippedSkin && SKINS[equippedSkin]) return SKINS[equippedSkin];
+    return PLAYER;
+  }, [equippedSkin]);
+
+  const resolvedPetUrl = useMemo(() => {
+    if (equippedPet && PETS[equippedPet]) return PETS[equippedPet];
+    return null;
+  }, [equippedPet]);
 
   // Determine current destination waypoint
   const targetWaypoint = useMemo(() => {
@@ -64,28 +181,13 @@ export default function PlayerModel({ activeRegion }) {
     const dist = Math.hypot(dx, dz);
 
     const stopThreshold = 0.12;
-    const isMoving = dist > stopThreshold;
+    const moving = dist > stopThreshold;
 
-    // Handle animation state transitions (Idle <-> Walk) with clean crossfading
-    if (isMoving && currentAnim.current !== 'walk') {
-      const walkAction = actions?.['walk'];
-      const idleAction = actions?.['idle'];
-      if (walkAction) {
-        walkAction.reset().fadeIn(0.2).play();
-        if (idleAction) idleAction.fadeOut(0.2);
-        currentAnim.current = 'walk';
-      }
-    } else if (!isMoving && currentAnim.current !== 'idle') {
-      const walkAction = actions?.['walk'];
-      const idleAction = actions?.['idle'];
-      if (idleAction) {
-        idleAction.reset().fadeIn(0.3).play();
-        if (walkAction) walkAction.fadeOut(0.3);
-        currentAnim.current = 'idle';
-      }
+    if (moving !== isMoving) {
+      setIsMoving(moving);
     }
 
-    if (isMoving) {
+    if (moving) {
       // 1. Natural deceleration curve when nearing destination
       const baseSpeed = WORLD_CONFIG.player.walkSpeed || 3.4;
       const speedFactor = Math.min(1.0, Math.max(0.35, dist / 1.4));
@@ -112,13 +214,10 @@ export default function PlayerModel({ activeRegion }) {
       // Rotate to face landmark or forward
       let settledAngle = WORLD_CONFIG.player.rotation[1];
       if (activeRegion === REALMS.MIND) {
-        // Face toward Mind tower [-6.2, 0, -4.5] from [-4.6, 0, -3.2]
         settledAngle = Math.atan2(-6.2 - (-4.6), -4.5 - (-3.2));
       } else if (activeRegion === REALMS.BODY) {
-        // Face toward Body dojo [-6.0, 0, 4.5] from [-4.4, 0, 3.2]
         settledAngle = Math.atan2(-6.0 - (-4.4), 4.5 - 3.2);
       } else if (activeRegion === REALMS.CRAFT) {
-        // Face toward Craft watermill [6.2, 0, 0.4] from [4.8, 0, 0.4]
         settledAngle = Math.atan2(6.2 - 4.8, 0.4 - 0.4);
       }
 
@@ -144,10 +243,24 @@ export default function PlayerModel({ activeRegion }) {
       scale={WORLD_CONFIG.player.scale}
       position={[currentPos.current.x, currentPos.current.y, currentPos.current.z]}
     >
-      <primitive object={scene} />
+      <Suspense fallback={null}>
+        <CharacterVisual
+          key={resolvedSkinUrl}
+          skinUrl={resolvedSkinUrl}
+          isMoving={isMoving}
+        />
+        {resolvedPetUrl && (
+          <CompanionPet
+            key={resolvedPetUrl}
+            petUrl={resolvedPetUrl}
+            isMoving={isMoving}
+          />
+        )}
+      </Suspense>
     </group>
   );
 }
 
 useGLTF.preload(PLAYER);
-
+Object.values(SKINS).forEach((url) => useGLTF.preload(url));
+Object.values(PETS).forEach((url) => useGLTF.preload(url));

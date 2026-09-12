@@ -81,12 +81,45 @@ export const CAMPFIRE = {
 
 export const SKYBOX = '/assets/world/skybox/skybox-day.png';
 
+export const SKINS = {
+  default: '/assets/world/characters/character-archer.glb',
+  'character-archer': '/assets/world/characters/character-archer.glb',
+  'character-oobi': '/assets/world/characters/character-oobi.glb',
+  'character-oodi': '/assets/world/characters/character-oodi.glb',
+  'character-ooli': '/assets/world/characters/character-ooli.glb',
+};
+
+export const PETS = {
+  'animal-fox': '/assets/world/pets/animal-fox.glb',
+  'animal-lion': '/assets/world/pets/animal-lion.glb',
+  'animal-panda': '/assets/world/pets/animal-panda.glb',
+  'animal-cat': '/assets/world/pets/animal-cat.glb',
+};
+
+export const DECOR = {
+  'fountain-round-detail': '/assets/world/props/fountain-round-detail.glb',
+  'banner-red': '/assets/world/props/banner-red.glb',
+  'banner-green': '/assets/world/props/banner-green.glb',
+  'stall-red': '/assets/world/props/stall-red.glb',
+  'stall-green': '/assets/world/props/stall-green.glb',
+};
+
+export const EXPANSIONS = {
+  mind_library: '/assets/world/buildings/tower-square.glb',
+  body_coliseum: '/assets/world/buildings/platform.glb',
+  craft_foundry: '/assets/world/buildings/chimney.glb',
+};
+
 /**
  * Clean semantic interface for direct component usage:
  * e.g., `assets.player`, `assets.mind`, `assets.craft`, `assets.campfire`
  */
 export const assets = {
   player: PLAYER,
+  skins: SKINS,
+  pets: PETS,
+  decor: DECOR,
+  expansions: EXPANSIONS,
   mind: MIND,
   body: BODY,
   craft: CRAFT,
@@ -100,3 +133,4 @@ export const assets = {
 };
 
 export default assets;
+

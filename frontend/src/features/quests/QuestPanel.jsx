@@ -133,7 +133,7 @@ export default function QuestPanel({ activeRegion, onCompleteQuest }) {
 
       // Inform parent layout
       if (onCompleteQuest) {
-        onCompleteQuest({
+        onCompleteQuest(responseData?.player ? responseData : {
           ...quest,
           xpReward: quest.xp_reward ?? quest.xpReward ?? 50,
           goldReward: quest.gold_reward ?? quest.goldReward ?? 25,
@@ -198,7 +198,7 @@ export default function QuestPanel({ activeRegion, onCompleteQuest }) {
       {/* 4. Footer Info */}
       <div className="pt-3 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-500">
         <span>Active Quests: {activeCount}</span>
-        <span>Progression slice &bull; Member 2</span>
+        <span>Daily Missions &bull; Real Life RPG</span>
       </div>
 
       {/* 5. Quest Form / Modal */}

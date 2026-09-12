@@ -43,3 +43,6 @@ Thumbs.db
 
 # Local source asset library
 assets_lib/
+
+# Local database storage
+backend/data/

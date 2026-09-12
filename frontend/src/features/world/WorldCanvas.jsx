@@ -4,7 +4,6 @@ import { Sun, Moon, Sunrise, Sunset, Play, Pause, Compass, RotateCcw } from 'luc
 import WorldScene from './WorldScene';
 import { WORLD_CONFIG, REALMS } from './worldConfig';
 import { gameClock, getCycleMood } from './hooks/useGameClock';
-import RealmEvolutionDevBar from './ui/RealmEvolutionDevBar';
 
 /**
  * Fallback Loading State for 3D Asset Streaming
@@ -126,7 +125,10 @@ export default function WorldCanvas({
   activeRegion = null,
   onSelectRegion,
   realmLevels = { mind: 1, body: 1, craft: 1 },
-  onSetRealmLevel,
+  equippedSkin = null,
+  equippedPet = null,
+  equippedDecor = null,
+  masteryExpansions = [],
 }) {
   const isRealmFocused = Boolean(activeRegion && activeRegion !== 'overview');
 
@@ -154,11 +156,15 @@ export default function WorldCanvas({
             activeRegion={activeRegion}
             onSelectRegion={onSelectRegion}
             realmLevels={realmLevels}
+            equippedSkin={equippedSkin}
+            equippedPet={equippedPet}
+            equippedDecor={equippedDecor}
+            masteryExpansions={masteryExpansions}
           />
         </Canvas>
       </Suspense>
 
-      {/* Floating Top Controls: Celestial Clock HUD, Return to World & Dev Bar */}
+      {/* Floating Top Controls: Celestial Clock HUD & Return to World */}
       <div className="absolute top-3 left-4 md:left-52 flex items-center space-x-2 pointer-events-none z-20">
         <GameClockWidget />
 
@@ -173,14 +179,6 @@ export default function WorldCanvas({
             <span>Return to World</span>
           </button>
         )}
-
-        {/* Development-Only Realm Evolution State Controller (Isolated Member 1 Dev Tool) */}
-        <RealmEvolutionDevBar
-          realmLevels={realmLevels}
-          onSetLevel={onSetRealmLevel}
-          activeRegion={activeRegion}
-          onSelectRegion={onSelectRegion}
-        />
       </div>
 
       {/* Subtle Bottom Interaction Hint */}

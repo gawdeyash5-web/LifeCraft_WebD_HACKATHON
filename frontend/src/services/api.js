@@ -38,30 +38,45 @@ export async function apiRequest(endpoint, options = {}) {
 export const Api = {
   health: () => apiRequest('/health'),
   
-  // Auth (Member 3)
+  // Auth
   auth: {
     login: (credentials) => apiRequest('/auth/login', { method: 'POST', body: JSON.stringify(credentials) }),
     register: (data) => apiRequest('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
   },
 
-  // Player (Member 3)
+  // Player
   player: {
     getMe: () => apiRequest('/player/me'),
+    getProfile: () => apiRequest('/player/profile'),
     updateRegion: (activeRegion) => apiRequest('/player/region', { method: 'PATCH', body: JSON.stringify({ activeRegion }) }),
   },
 
-  // Quests (Member 2)
+  // Quests
   quests: {
-    list: () => apiRequest('/quests'),
+    list: (params = '') => apiRequest(`/quests${params}`),
     create: (quest) => apiRequest('/quests', { method: 'POST', body: JSON.stringify(quest) }),
+    getById: (id) => apiRequest(`/quests/${id}`),
+    update: (id, data) => apiRequest(`/quests/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
     complete: (id) => apiRequest(`/quests/${id}/complete`, { method: 'POST' }),
     delete: (id) => apiRequest(`/quests/${id}`, { method: 'DELETE' }),
   },
 
-  // Economy (Member 3)
+  // Economy & Cosmetics
   economy: {
     getItems: () => apiRequest('/economy/items'),
     buyItem: (itemId) => apiRequest('/economy/buy', { method: 'POST', body: JSON.stringify({ itemId }) }),
     getInventory: () => apiRequest('/economy/inventory'),
+    equipItem: (inventoryId) => apiRequest(`/economy/inventory/${inventoryId}/equip`, { method: 'PATCH' }),
+    unequipItem: (inventoryId) => apiRequest(`/economy/inventory/${inventoryId}/unequip`, { method: 'PATCH' }),
+  },
+
+  // Achievements
+  achievements: {
+    list: () => apiRequest('/achievements'),
+  },
+
+  // Events
+  events: {
+    list: () => apiRequest('/events'),
   },
 };

@@ -4,10 +4,9 @@ import { Api } from '../../services/api';
 import AuthModal from './AuthModal';
 
 /**
- * Player Profile & RPG Stats Module (Owned by Member 3)
+ * Player Profile & RPG Stats Module
  * 
- * Displays Level, XP progress bar, Streak counter, 5 RPG Attributes,
- * and live synchronization with PostgreSQL backend.
+ * Displays Level, XP progress bar, Streak counter, and RPG Attributes.
  */
 export default function PlayerStatsPlaceholder({ player: fallbackPlayer }) {
   const [profile, setProfile] = useState(fallbackPlayer || {});
@@ -196,8 +195,9 @@ export default function PlayerStatsPlaceholder({ player: fallbackPlayer }) {
         </div>
       </div>
 
-      <div className="text-[11px] text-slate-500 italic text-center pt-2">
-        Owned by Member 3 &bull; Integrated with PostgreSQL
+      <div className="text-[11px] text-slate-400 text-center pt-2 border-t border-slate-800/60 flex items-center justify-center space-x-1.5">
+        <Sparkles className="w-3 h-3 text-indigo-400" />
+        <span>Personal Attributes &bull; Real-time progression synchronization</span>
       </div>
 
       {/* Auth Modal */}

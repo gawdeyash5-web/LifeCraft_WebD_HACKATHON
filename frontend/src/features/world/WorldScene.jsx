@@ -15,7 +15,113 @@ import MindRealm from './Realm/MindRealm';
 import BodyRealm from './Realm/BodyRealm';
 import CraftRealm from './Realm/CraftRealm';
 
+import { useGLTF } from '@react-three/drei';
+import { DECOR, EXPANSIONS } from './assets';
 import Clouds from './effects/Clouds';
+
+function EquippedWorldDecor({ decorKey }) {
+  if (!decorKey || !DECOR[decorKey]) return null;
+  return <DecorMesh decorKey={decorKey} modelUrl={DECOR[decorKey]} />;
+}
+
+function DecorMesh({ decorKey, modelUrl }) {
+  const { scene } = useGLTF(modelUrl);
+  const clonedScene = React.useMemo(() => scene.clone(), [scene]);
+
+  React.useEffect(() => {
+    clonedScene.traverse((child) => {
+      if (child.isMesh) {
+        child.castShadow = true;
+        child.receiveShadow = true;
+      }
+    });
+  }, [clonedScene]);
+
+  let position = [0.8, 0, -1.8];
+  let rotation = [0, 0, 0];
+  let scale = 0.7;
+
+  if (decorKey === 'banner-red') {
+    position = [-2.8, 0, 0.4];
+    rotation = [0, Math.PI / 2, 0];
+    scale = 0.8;
+  } else if (decorKey === 'banner-green') {
+    position = [2.8, 0, 0.4];
+    rotation = [0, -Math.PI / 2, 0];
+    scale = 0.8;
+  } else if (decorKey === 'stall-red' || decorKey === 'stall-green') {
+    position = [1.8, 0, 2.2];
+    rotation = [0, -Math.PI / 4, 0];
+    scale = 0.7;
+  } else if (decorKey === 'fountain-round-detail') {
+    position = [0.7, 0, -1.9];
+    scale = 0.75;
+  }
+
+  return (
+    <primitive
+      object={clonedScene}
+      position={position}
+      rotation={rotation}
+      scale={scale}
+    />
+  );
+}
+
+function MasteryExpansionZones({ expansions = [] }) {
+  if (!expansions || expansions.length === 0) return null;
+  return (
+    <group>
+      {expansions.includes('mind_library') && (
+        <ExpansionBuilding
+          modelUrl={EXPANSIONS.mind_library}
+          position={[-8.2, 0, -6.2]}
+          rotation={[0, 0.6, 0]}
+          scale={0.75}
+        />
+      )}
+      {expansions.includes('body_coliseum') && (
+        <ExpansionBuilding
+          modelUrl={EXPANSIONS.body_coliseum}
+          position={[-8.2, 0, 6.2]}
+          rotation={[0, -0.4, 0]}
+          scale={0.8}
+        />
+      )}
+      {expansions.includes('craft_foundry') && (
+        <ExpansionBuilding
+          modelUrl={EXPANSIONS.craft_foundry}
+          position={[8.4, 0, 1.8]}
+          rotation={[0, -0.8, 0]}
+          scale={0.75}
+        />
+      )}
+    </group>
+  );
+}
+
+function ExpansionBuilding({ modelUrl, position, rotation, scale }) {
+  const { scene } = useGLTF(modelUrl);
+  const clonedScene = React.useMemo(() => scene.clone(), [scene]);
+
+  React.useEffect(() => {
+    clonedScene.traverse((child) => {
+      if (child.isMesh) {
+        child.castShadow = true;
+        child.receiveShadow = true;
+      }
+    });
+  }, [clonedScene]);
+
+  return (
+    <primitive
+      object={clonedScene}
+      position={position}
+      rotation={rotation}
+      scale={scale}
+    />
+  );
+}
 
 /**
  * Upgraded Living WorldScene Orchestrator
@@ -27,6 +133,10 @@ export default function WorldScene({
   activeRegion,
   onSelectRegion,
   realmLevels = { mind: 1, body: 1, craft: 1 },
+  equippedSkin = null,
+  equippedPet = null,
+  equippedDecor = null,
+  masteryExpansions = [],
 }) {
   const [isNight, setIsNight] = useState(false);
   const sunLightRef = useRef();
@@ -144,7 +254,17 @@ export default function WorldScene({
 
       {/* 8. Centerpiece: Living Player & Streak Campfire */}
       <Campfire isNight={isNight} />
-      <PlayerModel activeRegion={activeRegion} />
+      <PlayerModel
+        activeRegion={activeRegion}
+        equippedSkin={equippedSkin}
+        equippedPet={equippedPet}
+      />
+
+      {/* Equipped World Decor (Fountain, Banners, Trade Stall) */}
+      <EquippedWorldDecor decorKey={equippedDecor} />
+
+      {/* Mastery Expansion Zones (Library, Coliseum, Foundry) */}
+      <MasteryExpansionZones expansions={masteryExpansions} />
 
       {/* 9. The Three Specialized Realms */}
       <MindRealm

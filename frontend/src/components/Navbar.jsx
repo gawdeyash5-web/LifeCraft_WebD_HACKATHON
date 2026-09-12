@@ -68,7 +68,10 @@ export default function Navbar({ player = {}, onTabSelect, activeTab }) {
         </div>
 
         {/* User Profile Avatar Dropdown */}
-        <div className="flex items-center space-x-2 bg-slate-900/80 hover:bg-slate-800/80 px-2.5 py-1 rounded-xl border border-slate-800 cursor-pointer transition">
+        <div
+          onClick={() => onTabSelect && onTabSelect('stats')}
+          className="flex items-center space-x-2 bg-slate-900/80 hover:bg-slate-800/80 px-2.5 py-1 rounded-xl border border-slate-800 cursor-pointer transition"
+        >
           <div className="w-6 h-6 rounded-full bg-indigo-600/80 border border-indigo-400 flex items-center justify-center text-white text-xs font-bold">
             {username[0]}
           </div>

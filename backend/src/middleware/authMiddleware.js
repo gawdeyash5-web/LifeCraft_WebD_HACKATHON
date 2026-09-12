@@ -2,10 +2,8 @@ import jwt from 'jsonwebtoken';
 import { errorResponse } from '../utils/response.js';
 
 /**
- * Authentication Middleware (Owned by Member 3)
- * 
+ * Authentication Middleware
  * Verifies Bearer JWT token and attaches user payload to req.user
- * TODO (Member 3): Implement token verification & database lookup
  */
 export const requireAuth = (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -22,9 +20,12 @@ export const requireAuth = (req, res, next) => {
     req.user = {
       ...decoded,
       userId: decoded.userId || decoded.id,
+      id: decoded.userId || decoded.id,
     };
     next();
   } catch (err) {
     return errorResponse(res, 'Invalid or expired authentication token', 401, 'INVALID_TOKEN');
   }
 };
+
+export const authenticateToken = requireAuth;

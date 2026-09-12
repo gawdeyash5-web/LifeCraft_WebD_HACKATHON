@@ -3,13 +3,13 @@ import { getXpForLevel } from '../progression/progressionService.js';
 import { successResponse, errorResponse } from '../utils/response.js';
 
 /**
- * Player Controller (Owned by Member 3)
- * Manages player profile, level, gold, and attributes.
+ * Player Controller
+ * Manages player profile, level, gold, realm XP, equipped cosmetics, and mastery expansions.
  */
 
 export const getPlayerProfile = async (req, res, next) => {
   try {
-    const userId = req.user.userId;
+    const userId = req.user?.userId || req.user?.id;
 
     const result = await query(
       `SELECT
@@ -24,6 +24,16 @@ export const getPlayerProfile = async (req, res, next) => {
          p.creativity,
          p.wisdom,
          p.discipline,
+         p.mind_xp,
+         p.body_xp,
+         p.craft_xp,
+         p.mind_level,
+         p.body_level,
+         p.craft_level,
+         p.equipped_skin,
+         p.equipped_pet,
+         p.equipped_decor,
+         p.mastery_expansions,
          p.unlocked_regions,
          p.active_region,
          u.username
@@ -56,6 +66,22 @@ export const getPlayerProfile = async (req, res, next) => {
         wisdom: player.wisdom,
         discipline: player.discipline,
       },
+      realmXp: {
+        mind: player.mind_xp || 0,
+        body: player.body_xp || 0,
+        craft: player.craft_xp || 0,
+      },
+      realmLevels: {
+        mind: player.mind_level || 1,
+        body: player.body_level || 1,
+        craft: player.craft_level || 1,
+      },
+      equipped: {
+        skin: player.equipped_skin || 'character-archer',
+        pet: player.equipped_pet || null,
+        decor: player.equipped_decor || null,
+      },
+      masteryExpansions: player.mastery_expansions || [],
       unlockedRegions: player.unlocked_regions || ['mind', 'body', 'craft'],
       activeRegion: player.active_region || 'mind',
     });
@@ -66,7 +92,7 @@ export const getPlayerProfile = async (req, res, next) => {
 
 export const updatePlayerRegion = async (req, res, next) => {
   try {
-    const userId = req.user.userId;
+    const userId = req.user?.userId || req.user?.id;
     const { activeRegion } = req.body;
 
     if (!activeRegion) {

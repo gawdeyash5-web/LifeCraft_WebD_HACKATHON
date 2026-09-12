@@ -63,7 +63,7 @@ export const register = async (req, res, next) => {
            intelligence, strength, creativity, wisdom, discipline,
            unlocked_regions, active_region
          ) VALUES (
-           $1, 1, 0, 50, 0,
+           $1, 1, 0, 150, 0,
            10, 10, 10, 10, 10,
            ARRAY['mind', 'body', 'craft'], 'mind'
          )`,

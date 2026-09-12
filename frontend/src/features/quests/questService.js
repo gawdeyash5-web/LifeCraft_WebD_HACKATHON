@@ -1,7 +1,7 @@
 import { apiRequest } from '../../services/api.js';
 
 /**
- * Quest API Service (Owned by Member 2)
+ * Quest API Service
  * Handles client-side API calls for quests and progression.
  * Includes offline-ready mock state fallback for local development or demo resilience.
  */

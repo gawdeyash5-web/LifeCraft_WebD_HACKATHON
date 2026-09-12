@@ -7,11 +7,8 @@ export const DEFAULT_REALM_LEVELS = {
 };
 
 /**
- * Isolated Visual Realm Evolution State Container (Member 1 Dev / Test Mode)
- * 
- * Cleanly isolates the temporary visual test state for Member 1's 3D world testing.
- * When Member 2 connects the backend progression API, this hook seamlessly accepts
- * incoming external levels: { mindLevel, bodyLevel, craftLevel }.
+ * Visual Realm Levels State Hook
+ * Manages realm evolution levels: { mind, body, craft }.
  */
 export function useRealmLevels(initialLevels = DEFAULT_REALM_LEVELS) {
   const [levels, setLevels] = useState(initialLevels);

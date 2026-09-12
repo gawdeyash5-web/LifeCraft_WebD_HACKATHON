@@ -1,12 +1,24 @@
 import { Router } from 'express';
-import { getShopItems, buyItem, getInventory } from './economyController.js';
+import {
+  getShopItems,
+  buyItem,
+  getUserInventory,
+  equipItem,
+  unequipItem,
+} from './economyController.js';
 import { requireAuth } from '../middleware/authMiddleware.js';
 
 const router = Router();
 
-// Routes owned by Member 3
+// Catalog & Purchases
 router.get('/items', getShopItems);
 router.post('/buy', requireAuth, buyItem);
-router.get('/inventory', requireAuth, getInventory);
+
+// Inventory & Equipping
+router.get('/inventory', requireAuth, getUserInventory);
+router.patch('/inventory/:id/equip', requireAuth, equipItem);
+router.patch('/inventory/:id/unequip', requireAuth, unequipItem);
+router.post('/equip', requireAuth, equipItem);
+router.post('/unequip', requireAuth, unequipItem);
 
 export default router;
