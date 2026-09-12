@@ -6,8 +6,8 @@ import BottomRealmDock from './components/BottomRealmDock';
 import WorldCanvas from './features/world/WorldCanvas';
 import PlayerStatsPlaceholder from './features/player/PlayerStatsPlaceholder';
 import ShopPlaceholder from './features/economy/ShopPlaceholder';
-import { INITIAL_PLAYER_STATE, REGIONS } from './utils/contracts';
 import CloseButton from './components/CloseButton';
+import { INITIAL_PLAYER_STATE, REGIONS } from './utils/contracts';
 import useRealmLevels from './features/world/hooks/useRealmLevels';
 
 /**
@@ -116,32 +116,35 @@ export default function App() {
           onOpenAchievements={() => setActiveTab('achievements')}
         />
 
-        {/* Modal Overlay for Realm Shop or Character Stats (Layer 4 & 5) */}
+        {/* Modal Overlay for Realm Shop or Character Stats */}
         {(activeTab === 'shop' || activeTab === 'stats') && (
           <div
             role="dialog"
             aria-modal="true"
             onClick={() => setActiveTab('home')}
-            className="absolute inset-0 z-40 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
+            className="absolute inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
           >
             <div
               onClick={(e) => e.stopPropagation()}
-              className="relative z-50 w-full max-w-md max-h-[85vh] overflow-y-auto"
+              className="relative w-full max-w-md flex flex-col items-end"
             >
-              <div className="absolute top-3 right-3 z-50">
+              {/* Standalone clean Close Button positioned above panel - 100% visible, never clipped */}
+              <div className="mb-2">
                 <CloseButton onClose={() => setActiveTab('home')} />
               </div>
-              {activeTab === 'shop' && (
-                <ShopPlaceholder
-                  gold={player.gold}
-                  onBuyItem={handleBuyItem}
-                />
-              )}
-              {activeTab === 'stats' && (
-                <PlayerStatsPlaceholder
-                  player={player}
-                />
-              )}
+              <div className="w-full max-h-[82vh] overflow-y-auto rounded-2xl shadow-2xl">
+                {activeTab === 'shop' && (
+                  <ShopPlaceholder
+                    gold={player.gold}
+                    onBuyItem={handleBuyItem}
+                  />
+                )}
+                {activeTab === 'stats' && (
+                  <PlayerStatsPlaceholder
+                    player={player}
+                  />
+                )}
+              </div>
             </div>
           </div>
         )}

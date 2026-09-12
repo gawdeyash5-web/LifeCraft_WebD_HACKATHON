@@ -82,9 +82,9 @@ export default function RightOverlayDrawer({
   ];
 
   return (
-    <aside className="absolute right-4 top-4 bottom-24 z-20 hidden lg:flex flex-col gap-3 pointer-events-none w-80">
+    <aside className="absolute right-4 top-4 bottom-24 z-20 hidden lg:flex flex-col space-y-3 pointer-events-none w-80">
       {/* 1. Today's Quests Floating Glass Card */}
-      <div className="flex-1 min-h-[180px] flex flex-col p-4 rounded-2xl bg-slate-900/90 backdrop-blur-xl border border-slate-700/60 shadow-2xl pointer-events-auto overflow-hidden">
+      <div className="flex-1 min-h-0 flex flex-col p-4 rounded-2xl bg-slate-900/80 backdrop-blur-xl border border-slate-700/50 shadow-2xl pointer-events-auto overflow-hidden">
         <div className="flex items-center justify-between pb-3 border-b border-slate-800/80">
           <div className="flex items-center space-x-2">
             <Sparkles className="w-4 h-4 text-indigo-400" />
@@ -166,7 +166,7 @@ export default function RightOverlayDrawer({
       </div>
 
       {/* 2. Player Stats Floating Glass Card */}
-      <div className="flex-shrink-0 p-4 rounded-2xl bg-slate-900/90 backdrop-blur-xl border border-slate-700/60 shadow-2xl pointer-events-auto">
+      <div className="p-4 rounded-2xl bg-slate-900/80 backdrop-blur-xl border border-slate-700/50 shadow-2xl pointer-events-auto">
         <div className="flex items-center justify-between pb-2.5 border-b border-slate-800/80">
           <h3 className="text-sm font-bold text-slate-100 tracking-wide">
             Player Stats

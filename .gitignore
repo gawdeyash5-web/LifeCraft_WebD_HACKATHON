@@ -39,6 +39,7 @@ Thumbs.db
 .parcel-cache/
 .turbo/
 .eslintcache
+.vite/
 
 # Local source asset library
 assets_lib/
