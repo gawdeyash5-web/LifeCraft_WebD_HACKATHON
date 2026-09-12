@@ -15,8 +15,9 @@ export const CYCLE_PHASES = {
   NIGHT: 'night',
 };
 
-// Default cycle duration: 120 seconds for full in-game 24h day-night cycle
-export const DEFAULT_DAY_LENGTH_SECONDS = 120;
+// Centralized in-game 24h celestial cycle duration: 10 minutes (600 seconds)
+export const GAME_DAY_DURATION = 600;
+export const DEFAULT_DAY_LENGTH_SECONDS = GAME_DAY_DURATION;
 
 // Celestial keyframes distributed smoothly across 24h (0.0 to 1.0)
 export const CELESTIAL_KEYFRAMES = [
@@ -246,8 +247,17 @@ export function getCycleMood(gameTime) {
   const minutes = totalMinutes % 60;
   const formattedTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 
-  const phase = k1.phase;
-  const isNight = t > 0.82 || t < 0.22;
+  let phase = k1.phase;
+  if (t >= 0.20 && t < 0.35) {
+    phase = CYCLE_PHASES.DAWN;
+  } else if (t >= 0.35 && t < 0.65) {
+    phase = CYCLE_PHASES.DAY;
+  } else if (t >= 0.65 && t < 0.82) {
+    phase = CYCLE_PHASES.SUNSET;
+  } else {
+    phase = CYCLE_PHASES.NIGHT;
+  }
+  const isNight = phase === CYCLE_PHASES.NIGHT;
 
   return {
     phase,
