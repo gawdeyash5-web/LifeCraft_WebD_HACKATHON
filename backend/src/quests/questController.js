@@ -421,12 +421,20 @@ export const completeQuest = async (req, res, next) => {
       ]
     );
 
-    // 8. Log quest completed event
+    // 8. Log quest completed and level up events
     await client.query(
       `INSERT INTO events (user_id, type, title, description)
        VALUES ($1, 'quest_completed', $2, $3)`,
       [userId, `Quest Completed: ${completedQuest.title}`, `Earned +${xpReward} XP and +${goldReward} Gold.`]
     );
+
+    if (leveledUp) {
+      await client.query(
+        `INSERT INTO events (user_id, type, title, description)
+         VALUES ($1, 'level_up', $2, $3)`,
+        [userId, `Level Up! Reached Level ${newLevel}`, `Congratulations! You leveled up from Level ${player.level} to Level ${newLevel}.`]
+      );
+    }
 
     await client.query('COMMIT');
 
@@ -442,8 +450,11 @@ export const completeQuest = async (req, res, next) => {
       },
       player: {
         level: newLevel,
-        xp: newXp,
-        nextLevelXp: levelInfo?.nextLevelXp || 100,
+        xp: levelInfo?.currentLevelXp ?? (newXp - (levelInfo?.currentLevelBaseXp || 0)),
+        nextLevelXp: levelInfo?.nextLevelThreshold ?? 100,
+        totalXp: newXp,
+        currentLevelBaseXp: levelInfo?.currentLevelBaseXp || 0,
+        progressPercent: levelInfo?.progressPercent || 0,
         gold: newGold,
         streak: newStreak,
         leveledUp,

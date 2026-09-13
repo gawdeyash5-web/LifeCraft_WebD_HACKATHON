@@ -14,6 +14,8 @@ import CloseButton from './components/CloseButton';
 import { INITIAL_PLAYER_STATE } from './utils/contracts';
 import useRealmLevels from './features/world/hooks/useRealmLevels';
 import { Api } from './services/api';
+import { fetchQuests } from './features/quests/questService';
+import { calculateLevelProgression } from './utils/progression';
 import DeveloperPasscodeModal from './features/developer/DeveloperPasscodeModal';
 import DeveloperViewModal from './features/developer/DeveloperViewModal';
 
@@ -44,6 +46,8 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('home'); // 'home' | 'quests' | 'inventory' | 'shop' | 'stats' | 'achievements' | 'events'
   const [activeRegion, setActiveRegion] = useState(null); // Starts in central plaza home overview
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [quests, setQuests] = useState([]);
+  const [initialCreateQuest, setInitialCreateQuest] = useState(false);
 
   // Developer View & Visual Preview State (Decoupled from real progression)
   const [isDevPasscodeOpen, setIsDevPasscodeOpen] = useState(false);
@@ -53,6 +57,18 @@ export default function App() {
     levels: { mind: null, body: null, craft: null },
     expansions: { mind_library: null, body_coliseum: null, craft_foundry: null },
   });
+
+  // Load authoritative quests from backend or resilient local fallback
+  const loadQuests = useCallback(async () => {
+    try {
+      const data = await fetchQuests();
+      if (Array.isArray(data)) {
+        setQuests(data);
+      }
+    } catch (err) {
+      console.warn('[App] Could not load quests:', err.message);
+    }
+  }, []);
 
   // Hydrate user profile, realm levels, equipped cosmetics, and mastery expansions from backend
   const hydratePlayerProfile = useCallback(async () => {
@@ -67,11 +83,14 @@ export default function App() {
           level: data.level ?? prev.level,
           xp: data.xp ?? prev.xp,
           nextLevelXp: data.nextLevelXp ?? prev.nextLevelXp,
+          totalXp: data.totalXp ?? prev.totalXp,
+          currentLevelBaseXp: data.currentLevelBaseXp ?? prev.currentLevelBaseXp,
           gold: data.gold ?? prev.gold,
           streak: data.streak ?? prev.streak,
           mindXp: data.mindXp,
           bodyXp: data.bodyXp,
           craftXp: data.craftXp,
+          attributes: data.attributes || prev.attributes,
         }));
         if (data.realmLevels) {
           setAllLevels(data.realmLevels);
@@ -88,15 +107,17 @@ export default function App() {
         if (Array.isArray(data.masteryExpansions)) {
           setMasteryExpansions(data.masteryExpansions);
         }
+        loadQuests();
       }
     } catch (err) {
       console.warn('[App] Could not hydrate profile from backend:', err.message);
     }
-  }, [setAllLevels]);
+  }, [setAllLevels, loadQuests]);
 
   useEffect(() => {
     hydratePlayerProfile();
-  }, [hydratePlayerProfile]);
+    loadQuests();
+  }, [hydratePlayerProfile, loadQuests]);
 
   // Handle region focus from 3D world click or bottom dock
   const handleSelectRegion = (regionId) => {
@@ -106,60 +127,71 @@ export default function App() {
     }
   };
 
-  // Quest completion handler with authoritative backend synchronization
+  // Quest completion handler with authoritative backend synchronization & excess XP carryover
   const handleCompleteQuest = async (questOrResult) => {
-    if (questOrResult?.player) {
-      const p = questOrResult.player;
-      setPlayer((prev) => ({
-        ...prev,
-        level: p.level ?? prev.level,
-        xp: p.xp ?? prev.xp,
-        gold: p.gold ?? prev.gold,
-        nextLevelXp: p.nextLevelXp ?? prev.nextLevelXp,
-      }));
-      setAllLevels({
-        mind: p.mindLevel ?? p.mind_level ?? 1,
-        body: p.bodyLevel ?? p.body_level ?? 1,
-        craft: p.craftLevel ?? p.craft_level ?? 1,
-      });
-      if (p.masteryExpansions) {
-        setMasteryExpansions(p.masteryExpansions);
-      }
-      return;
-    }
+    const completedId = questOrResult?.id || questOrResult?.quest?.id;
+    let playerUpdate = questOrResult?.player;
 
-    if (questOrResult?.id) {
+    if (!playerUpdate && completedId) {
       try {
-        const res = await Api.quests.complete(questOrResult.id);
+        const res = await Api.quests.complete(completedId);
         if (res?.player) {
-          const p = res.player;
-          setPlayer((prev) => ({
-            ...prev,
-            level: p.level ?? prev.level,
-            xp: p.xp ?? prev.xp,
-            gold: p.gold ?? prev.gold,
-            nextLevelXp: p.nextLevelXp ?? prev.nextLevelXp,
-          }));
-          setAllLevels({
-            mind: p.mindLevel ?? p.mind_level ?? 1,
-            body: p.bodyLevel ?? p.body_level ?? 1,
-            craft: p.craftLevel ?? p.craft_level ?? 1,
-          });
-          if (p.masteryExpansions) {
-            setMasteryExpansions(p.masteryExpansions);
-          }
-          return;
+          playerUpdate = res.player;
         }
       } catch (err) {
         console.warn('[App] Quest complete API call failed, applying fallback:', err.message);
       }
     }
 
-    setPlayer((prev) => ({
-      ...prev,
-      xp: prev.xp + (questOrResult?.xpReward || 50),
-      gold: prev.gold + (questOrResult?.goldReward || 25),
-    }));
+    if (playerUpdate) {
+      setPlayer((prev) => ({
+        ...prev,
+        level: playerUpdate.level ?? prev.level,
+        xp: playerUpdate.xp ?? prev.xp,
+        gold: playerUpdate.gold ?? prev.gold,
+        nextLevelXp: playerUpdate.nextLevelXp ?? prev.nextLevelXp,
+        totalXp: playerUpdate.totalXp ?? prev.totalXp,
+        currentLevelBaseXp: playerUpdate.currentLevelBaseXp ?? prev.currentLevelBaseXp,
+      }));
+      setAllLevels({
+        mind: playerUpdate.mindLevel ?? playerUpdate.mind_level ?? 1,
+        body: playerUpdate.bodyLevel ?? playerUpdate.body_level ?? 1,
+        craft: playerUpdate.craftLevel ?? playerUpdate.craft_level ?? 1,
+      });
+      if (playerUpdate.masteryExpansions) {
+        setMasteryExpansions(playerUpdate.masteryExpansions);
+      }
+    } else {
+      // Pure fallback progression calculation carrying excess XP forward
+      const xpGain = questOrResult?.xp_reward ?? questOrResult?.xpReward ?? 50;
+      const goldGain = questOrResult?.gold_reward ?? questOrResult?.goldReward ?? 25;
+      setPlayer((prev) => {
+        const currentBase = prev.currentLevelBaseXp || 0;
+        const currentTotal = (prev.totalXp ?? (currentBase + prev.xp)) + xpGain;
+        const prog = calculateLevelProgression(currentTotal);
+        return {
+          ...prev,
+          level: prog.level,
+          xp: prog.currentLevelXp,
+          nextLevelXp: prog.nextLevelThreshold,
+          totalXp: currentTotal,
+          currentLevelBaseXp: prog.currentLevelBaseXp,
+          gold: prev.gold + goldGain,
+        };
+      });
+    }
+
+    // Mark completed locally immediately to avoid UI lag and re-fetch
+    if (completedId) {
+      setQuests((prev) =>
+        prev.map((q) =>
+          q.id === completedId
+            ? { ...q, completed: true, completed_at: new Date().toISOString() }
+            : q
+        )
+      );
+    }
+    loadQuests();
   };
 
   // Item buy handler
@@ -184,6 +216,7 @@ export default function App() {
   // Auth success handler
   const handleAuthSuccess = () => {
     hydratePlayerProfile();
+    loadQuests();
   };
 
   // Developer View Handlers (Isolated visual simulation)
@@ -286,20 +319,46 @@ export default function App() {
           />
         </div>
 
+        {/* Developer Preview Active HUD Floating Badge */}
+        {devPreview.active && (
+          <div className="absolute top-14 left-4 md:left-52 z-20 flex items-center space-x-2 bg-slate-900/90 backdrop-blur-md border border-amber-500/50 px-3 py-1.5 rounded-xl text-xs font-mono text-amber-300 shadow-xl pointer-events-auto">
+            <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+            <span className="font-bold">DEV PREVIEW ACTIVE</span>
+            <button
+              type="button"
+              onClick={handleResetPreview}
+              className="ml-2 px-2 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/40 text-amber-200 text-[10px] font-bold border border-amber-500/40 transition"
+            >
+              Reset Preview
+            </button>
+          </div>
+        )}
+
         {/* 3. Floating Left Sidebar */}
         <SidebarNav
           activeTab={activeTab}
-          onTabSelect={setActiveTab}
+          onTabSelect={(tab) => {
+            if (tab === 'quests') setInitialCreateQuest(false);
+            setActiveTab(tab);
+          }}
           onOpenDeveloperView={handleOpenDeveloperView}
         />
 
         {/* 4. Floating Right Panel: Today's Quests & Player Stats */}
         <RightOverlayDrawer
           player={player}
+          quests={quests}
           activeRegion={activeRegion}
           onCompleteQuest={handleCompleteQuest}
           onOpenStats={() => setActiveTab('stats')}
-          onOpenQuests={() => setActiveTab('quests')}
+          onOpenQuests={() => {
+            setInitialCreateQuest(false);
+            setActiveTab('quests');
+          }}
+          onOpenCreateQuest={() => {
+            setInitialCreateQuest(true);
+            setActiveTab('quests');
+          }}
         />
 
         {/* 5. Floating Bottom Dock: 3 Realm Preview Cards & Utilities */}
@@ -317,7 +376,10 @@ export default function App() {
           <div
             role="dialog"
             aria-modal="true"
-            onClick={() => setActiveTab('home')}
+            onClick={() => {
+              setInitialCreateQuest(false);
+              setActiveTab('home');
+            }}
             className="absolute inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
           >
             <div
@@ -326,7 +388,7 @@ export default function App() {
             >
               {/* Standalone clean Close Button positioned above panel */}
               <div className="mb-2">
-                <CloseButton onClose={() => setActiveTab('home')} />
+                <CloseButton onClose={() => { setInitialCreateQuest(false); setActiveTab('home'); }} />
               </div>
               <div className="w-full max-h-[82vh] overflow-y-auto rounded-2xl shadow-2xl">
                 {(activeTab === 'shop' || activeTab === 'inventory') && (
@@ -348,6 +410,8 @@ export default function App() {
                   <QuestListPlaceholder
                     activeRegion={activeRegion}
                     onCompleteQuest={handleCompleteQuest}
+                    onQuestChange={loadQuests}
+                    initialCreate={initialCreateQuest}
                   />
                 )}
               </div>

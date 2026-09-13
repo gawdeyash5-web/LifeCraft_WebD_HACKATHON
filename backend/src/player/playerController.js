@@ -1,5 +1,5 @@
 import { query } from '../database/db.js';
-import { getXpForLevel } from '../progression/progressionService.js';
+import { getXpForLevel, calculateLevelFromXp } from '../progression/progressionService.js';
 import { successResponse, errorResponse } from '../utils/response.js';
 
 /**
@@ -48,15 +48,18 @@ export const getPlayerProfile = async (req, res, next) => {
     }
 
     const player = result.rows[0];
-    const nextLevelXp = getXpForLevel(player.level + 1);
+    const progression = calculateLevelFromXp(player.xp);
 
     return successResponse(res, {
       id: player.id,
       userId: player.user_id,
       username: player.username,
-      level: player.level,
-      xp: player.xp,
-      nextLevelXp,
+      level: progression.level,
+      xp: progression.currentLevelXp,
+      nextLevelXp: progression.nextLevelThreshold,
+      totalXp: progression.totalXp,
+      currentLevelBaseXp: progression.currentLevelBaseXp,
+      progressPercent: progression.progressPercent,
       gold: player.gold,
       streak: player.streak,
       attributes: {

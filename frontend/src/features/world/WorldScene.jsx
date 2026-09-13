@@ -14,6 +14,7 @@ import AmbientParticles from './effects/AmbientParticles';
 import MindRealm from './Realm/MindRealm';
 import BodyRealm from './Realm/BodyRealm';
 import CraftRealm from './Realm/CraftRealm';
+import MasteryExpansions from './MasteryExpansions';
 
 import { useGLTF } from '@react-three/drei';
 import { DECOR, EXPANSIONS } from './assets';
@@ -68,60 +69,7 @@ function DecorMesh({ decorKey, modelUrl }) {
   );
 }
 
-function MasteryExpansionZones({ expansions = [] }) {
-  if (!expansions || expansions.length === 0) return null;
-  return (
-    <group>
-      {expansions.includes('mind_library') && (
-        <ExpansionBuilding
-          modelUrl={EXPANSIONS.mind_library}
-          position={[-8.2, 0, -6.2]}
-          rotation={[0, 0.6, 0]}
-          scale={0.75}
-        />
-      )}
-      {expansions.includes('body_coliseum') && (
-        <ExpansionBuilding
-          modelUrl={EXPANSIONS.body_coliseum}
-          position={[-8.2, 0, 6.2]}
-          rotation={[0, -0.4, 0]}
-          scale={0.8}
-        />
-      )}
-      {expansions.includes('craft_foundry') && (
-        <ExpansionBuilding
-          modelUrl={EXPANSIONS.craft_foundry}
-          position={[8.4, 0, 1.8]}
-          rotation={[0, -0.8, 0]}
-          scale={0.75}
-        />
-      )}
-    </group>
-  );
-}
 
-function ExpansionBuilding({ modelUrl, position, rotation, scale }) {
-  const { scene } = useGLTF(modelUrl);
-  const clonedScene = React.useMemo(() => scene.clone(), [scene]);
-
-  React.useEffect(() => {
-    clonedScene.traverse((child) => {
-      if (child.isMesh) {
-        child.castShadow = true;
-        child.receiveShadow = true;
-      }
-    });
-  }, [clonedScene]);
-
-  return (
-    <primitive
-      object={clonedScene}
-      position={position}
-      rotation={rotation}
-      scale={scale}
-    />
-  );
-}
 
 /**
  * Upgraded Living WorldScene Orchestrator
@@ -264,7 +212,7 @@ export default function WorldScene({
       <EquippedWorldDecor decorKey={equippedDecor} />
 
       {/* Mastery Expansion Zones (Library, Coliseum, Foundry) */}
-      <MasteryExpansionZones expansions={masteryExpansions} />
+      <MasteryExpansions expansions={masteryExpansions} />
 
       {/* 9. The Three Specialized Realms */}
       <MindRealm

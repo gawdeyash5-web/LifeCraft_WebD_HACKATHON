@@ -10,15 +10,15 @@ import { Mountain, Coins, Flame, ChevronDown, Sparkles } from 'lucide-react';
  */
 export default function Navbar({ player = {}, onTabSelect, activeTab }) {
   const {
-    level = 12,
-    xp = 420,
-    nextLevelXp = 1000,
-    gold = 840,
-    streak = 14,
-    username = 'Yash',
+    level = 1,
+    xp = 0,
+    nextLevelXp = 100,
+    gold = 150,
+    streak = 0,
+    username = 'Hero',
   } = player;
 
-  const xpPercent = Math.min(100, Math.round((xp / (nextLevelXp || 1000)) * 100));
+  const xpPercent = Math.min(100, Math.max(0, Math.round((xp / (nextLevelXp || 100)) * 100)));
 
   return (
     <header className="relative z-30 w-full bg-slate-950/80 backdrop-blur-xl border-b border-slate-800/80 px-4 md:px-6 py-2.5 flex items-center justify-between shadow-2xl">

@@ -21,7 +21,7 @@ import {
  * - activeRegion: currently focused region from 3D world (e.g. 'mind', 'body', 'craft')
  * - onCompleteQuest: callback to parent when quest is completed
  */
-export default function QuestPanel({ activeRegion, onCompleteQuest }) {
+export default function QuestPanel({ activeRegion, onCompleteQuest, onQuestChange, initialCreate = false }) {
   const [quests, setQuests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -43,6 +43,14 @@ export default function QuestPanel({ activeRegion, onCompleteQuest }) {
       setRealmFilter(resolved);
     }
   }, [activeRegion]);
+
+  // Support initialCreate trigger
+  useEffect(() => {
+    if (initialCreate) {
+      setEditingQuest(null);
+      setIsModalOpen(true);
+    }
+  }, [initialCreate]);
 
   // Load quests from backend or fallback store
   const loadQuests = async () => {
@@ -101,6 +109,7 @@ export default function QuestPanel({ activeRegion, onCompleteQuest }) {
       const created = await createQuest(questData);
       setQuests((prev) => [created, ...prev]);
     }
+    onQuestChange?.();
   };
 
   const handleDeleteQuest = async (id) => {
@@ -109,6 +118,7 @@ export default function QuestPanel({ activeRegion, onCompleteQuest }) {
       setDeletingId(id);
       await deleteQuest(id);
       setQuests((prev) => prev.filter((q) => q.id !== id));
+      onQuestChange?.();
     } catch (err) {
       alert(err.message || 'Failed to delete quest');
     } finally {
@@ -139,6 +149,7 @@ export default function QuestPanel({ activeRegion, onCompleteQuest }) {
           goldReward: quest.gold_reward ?? quest.goldReward ?? 25,
         });
       }
+      onQuestChange?.();
     } catch (err) {
       alert(err.message || 'Could not complete quest');
     }

@@ -50,14 +50,19 @@ export const calculateLevelFromXp = (totalXp) => {
 
   const currentLevelBaseXp = getXpForLevel(level);
   const nextLevelXp = getXpForLevel(level + 1);
-  const xpNeeded = nextLevelXp - currentLevelBaseXp;
+  const nextLevelThreshold = nextLevelXp - currentLevelBaseXp;
+  const currentLevelXp = safeXp - currentLevelBaseXp;
 
-  const progressPercent = xpNeeded > 0
-    ? Math.min(100, Math.max(0, Math.floor(((safeXp - currentLevelBaseXp) / xpNeeded) * 100)))
+  const progressPercent = nextLevelThreshold > 0
+    ? Math.min(100, Math.max(0, Math.floor((currentLevelXp / nextLevelThreshold) * 100)))
     : 0;
 
   return {
     level,
+    totalXp: safeXp,
+    currentLevelXp, // Excess XP within current level (e.g. 20)
+    currentXp: currentLevelXp, // Alias for backward compatibility
+    nextLevelThreshold, // XP required in this level to reach next level (e.g. 182)
     currentLevelBaseXp,
     nextLevelXp,
     progressPercent,
@@ -232,6 +237,8 @@ export const calculateQuestCompletionProgression = ({
     streakType: streakInfo.streakType,
     currentLevelBaseXp: levelInfo.currentLevelBaseXp,
     nextLevelXp: levelInfo.nextLevelXp,
+    currentLevelXp: levelInfo.currentLevelXp,
+    nextLevelThreshold: levelInfo.nextLevelThreshold,
     progressPercent: levelInfo.progressPercent,
   };
 };
