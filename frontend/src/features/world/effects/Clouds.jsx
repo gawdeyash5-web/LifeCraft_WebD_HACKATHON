@@ -9,7 +9,28 @@ import * as THREE from 'three';
  * perimeter and underbelly of the floating diorama island, matching the
  * visual reference composition.
  */
-function CloudCluster({ position, scale = 1, speed = 1, phase = 0, opacity = 0.85 }) {
+// Shared geometries and materials for all cloud clusters (0 duplicate allocations)
+const _sharedCloudGeo = new THREE.DodecahedronGeometry(1, 1);
+const _cloudMat1 = new THREE.MeshLambertMaterial({
+  color: '#f8fafc',
+  transparent: true,
+  opacity: 0.85,
+  flatShading: true,
+});
+const _cloudMat2 = new THREE.MeshLambertMaterial({
+  color: '#f1f5f9',
+  transparent: true,
+  opacity: 0.80,
+  flatShading: true,
+});
+const _cloudMat3 = new THREE.MeshLambertMaterial({
+  color: '#ffffff',
+  transparent: true,
+  opacity: 0.85,
+  flatShading: true,
+});
+
+function CloudCluster({ position, scale = 1, speed = 1, phase = 0 }) {
   const groupRef = useRef();
 
   useFrame((state) => {
@@ -23,63 +44,17 @@ function CloudCluster({ position, scale = 1, speed = 1, phase = 0, opacity = 0.8
   return (
     <group ref={groupRef} position={position} scale={scale}>
       {/* Central main puff */}
-      <mesh position={[0, 0, 0]}>
-        <dodecahedronGeometry args={[1.0, 1]} />
-        <meshStandardMaterial
-          color="#f8fafc"
-          roughness={0.8}
-          metalness={0.05}
-          transparent
-          opacity={opacity}
-          flatShading
-        />
-      </mesh>
+      <mesh position={[0, 0, 0]} scale={1.0} geometry={_sharedCloudGeo} material={_cloudMat1} />
       {/* Secondary puffs */}
-      <mesh position={[0.8, -0.15, 0.2]}>
-        <dodecahedronGeometry args={[0.72, 1]} />
-        <meshStandardMaterial
-          color="#f1f5f9"
-          roughness={0.8}
-          transparent
-          opacity={opacity * 0.95}
-          flatShading
-        />
-      </mesh>
-      <mesh position={[-0.75, -0.1, -0.15]}>
-        <dodecahedronGeometry args={[0.68, 1]} />
-        <meshStandardMaterial
-          color="#f1f5f9"
-          roughness={0.8}
-          transparent
-          opacity={opacity * 0.95}
-          flatShading
-        />
-      </mesh>
-      <mesh position={[0.2, 0.4, -0.2]}>
-        <dodecahedronGeometry args={[0.62, 1]} />
-        <meshStandardMaterial
-          color="#ffffff"
-          roughness={0.8}
-          transparent
-          opacity={opacity}
-          flatShading
-        />
-      </mesh>
-      <mesh position={[-0.2, -0.3, 0.4]}>
-        <dodecahedronGeometry args={[0.55, 1]} />
-        <meshStandardMaterial
-          color="#e2e8f0"
-          roughness={0.8}
-          transparent
-          opacity={opacity * 0.9}
-          flatShading
-        />
-      </mesh>
+      <mesh position={[0.8, -0.15, 0.2]} scale={0.72} geometry={_sharedCloudGeo} material={_cloudMat2} />
+      <mesh position={[-0.75, -0.1, -0.15]} scale={0.68} geometry={_sharedCloudGeo} material={_cloudMat2} />
+      <mesh position={[0.2, 0.4, -0.2]} scale={0.62} geometry={_sharedCloudGeo} material={_cloudMat3} />
+      <mesh position={[-0.2, -0.3, 0.4]} scale={0.55} geometry={_sharedCloudGeo} material={_cloudMat2} />
     </group>
   );
 }
 
-export default function Clouds() {
+function Clouds() {
   const clouds = useMemo(() => [
     // Surrounding rim clouds framing the floating island
     { position: [-12.5, -2.2, -8.0], scale: 2.2, speed: 0.8, phase: 0.0 },
@@ -103,3 +78,6 @@ export default function Clouds() {
     </group>
   );
 }
+
+const MemoizedClouds = React.memo(Clouds);
+export default MemoizedClouds;

@@ -287,7 +287,7 @@ function buildNavigationPath(currentVec, destinationRegion) {
 /**
  * Autonomous Living Player Character with Dynamic Skin & Companion Pet
  */
-export default function PlayerModel({
+function PlayerModel({
   activeRegion,
   equippedSkin = null,
   equippedPet = null,
@@ -419,6 +419,8 @@ export default function PlayerModel({
   );
 }
 
+const MemoizedPlayerModel = React.memo(PlayerModel);
+export default MemoizedPlayerModel;
+
+// Preload only default starter character; cosmetics stream on-demand
 useGLTF.preload(PLAYER);
-Object.values(SKINS).forEach((url) => useGLTF.preload(url));
-Object.values(PETS).forEach((url) => useGLTF.preload(url));

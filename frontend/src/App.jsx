@@ -120,12 +120,12 @@ export default function App() {
   }, [hydratePlayerProfile, loadQuests]);
 
   // Handle region focus from 3D world click or bottom dock
-  const handleSelectRegion = (regionId) => {
+  const handleSelectRegion = useCallback((regionId) => {
     setActiveRegion(regionId);
     if (regionId) {
-      setPlayer((prev) => ({ ...prev, activeRegion: regionId }));
+      setPlayer((prev) => (prev.activeRegion === regionId ? prev : { ...prev, activeRegion: regionId }));
     }
-  };
+  }, []);
 
   // Quest completion handler with authoritative backend synchronization & excess XP carryover
   const handleCompleteQuest = async (questOrResult) => {
@@ -265,16 +265,17 @@ export default function App() {
   };
 
   // Compute Effective Realm Levels (Real Authoritative vs Developer Preview)
-  const effectiveRealmLevels = devPreview.active
-    ? {
-        mind: devPreview.levels.mind ?? realmLevels.mind ?? 1,
-        body: devPreview.levels.body ?? realmLevels.body ?? 1,
-        craft: devPreview.levels.craft ?? realmLevels.craft ?? 1,
-      }
-    : realmLevels;
+  const effectiveRealmLevels = React.useMemo(() => {
+    if (!devPreview.active) return realmLevels;
+    return {
+      mind: devPreview.levels.mind ?? realmLevels.mind ?? 1,
+      body: devPreview.levels.body ?? realmLevels.body ?? 1,
+      craft: devPreview.levels.craft ?? realmLevels.craft ?? 1,
+    };
+  }, [devPreview.active, devPreview.levels.mind, devPreview.levels.body, devPreview.levels.craft, realmLevels]);
 
   // Compute Effective Mastery Expansions (Real Authoritative vs Developer Preview)
-  const effectiveMasteryExpansions = (() => {
+  const effectiveMasteryExpansions = React.useMemo(() => {
     if (!devPreview.active) return masteryExpansions;
     let list = [...masteryExpansions];
     ['mind_library', 'body_coliseum', 'craft_foundry'].forEach((key) => {
@@ -286,7 +287,7 @@ export default function App() {
       }
     });
     return list;
-  })();
+  }, [devPreview.active, devPreview.expansions, masteryExpansions]);
 
   // Keyboard Escape listener to close open modal panels
   useEffect(() => {

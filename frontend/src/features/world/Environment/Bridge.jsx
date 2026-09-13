@@ -7,7 +7,7 @@ import { WORLD_CONFIG } from '../worldConfig';
 /**
  * Upgraded Timber Bridge & River Canal Component
  */
-export default function Bridge() {
+function Bridge() {
   const bridgeGltf = useGLTF(BRIDGE);
   const waterRef = useRef();
 
@@ -57,5 +57,8 @@ export default function Bridge() {
     </group>
   );
 }
+
+const MemoizedBridge = React.memo(Bridge);
+export default MemoizedBridge;
 
 useGLTF.preload(BRIDGE);

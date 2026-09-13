@@ -12,7 +12,7 @@ import { TREES, ROCKS, NATURE } from '../assets';
  * - Background mountain/forest silhouettes
  * - Gentle procedural wind sway on foliage
  */
-export default function Nature() {
+function Nature() {
   const treeDefGltf = useGLTF(TREES.default);
   const treePineGltf = useGLTF(TREES.pine);
   const treeOakGltf = useGLTF(TREES.oak);
@@ -23,8 +23,9 @@ export default function Nature() {
   const grassGltf = useGLTF(NATURE.grass);
 
   const foliageGroupRef = useRef();
+  const swayingChildrenRef = useRef([]);
 
-  // Clones with shadow setup
+  // Trees cast and receive hero shadows
   const treeDef = useMemo(() => {
     const c = treeDefGltf.scene.clone(true);
     c.traverse((child) => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true; } });
@@ -43,6 +44,7 @@ export default function Nature() {
     return c;
   }, [treeOakGltf]);
 
+  // Rocks cast and receive shadows
   const rockLarge = useMemo(() => {
     const c = rockLargeGltf.scene.clone(true);
     c.traverse((child) => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true; } });
@@ -51,39 +53,52 @@ export default function Nature() {
 
   const stoneLarge = useMemo(() => {
     const c = stoneLargeGltf.scene.clone(true);
-    c.traverse((child) => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true; } });
+    c.traverse((child) => { if (child.isMesh) { child.castShadow = false; child.receiveShadow = true; } });
     return c;
   }, [stoneLargeGltf]);
 
+  // Small ground foliage only receives shadows (eliminates shadow rasterization cost)
   const bush = useMemo(() => {
     const c = bushGltf.scene.clone(true);
-    c.traverse((child) => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true; } });
+    c.traverse((child) => { if (child.isMesh) { child.castShadow = false; child.receiveShadow = true; } });
     return c;
   }, [bushGltf]);
 
   const flower = useMemo(() => {
     const c = flowerGltf.scene.clone(true);
-    c.traverse((child) => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true; } });
+    c.traverse((child) => { if (child.isMesh) { child.castShadow = false; child.receiveShadow = true; } });
     return c;
   }, [flowerGltf]);
 
   const grass = useMemo(() => {
     const c = grassGltf.scene.clone(true);
-    c.traverse((child) => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true; } });
+    c.traverse((child) => { if (child.isMesh) { child.castShadow = false; child.receiveShadow = true; } });
     return c;
   }, [grassGltf]);
 
-  // Gentle procedural wind sway on foliage
-  useFrame((state) => {
+  // Cache swaying trees once on mount to avoid traversing all children every frame
+  React.useEffect(() => {
     if (foliageGroupRef.current) {
-      const t = state.clock.elapsedTime;
-      // Gentle overall wind wave
+      const swayers = [];
       foliageGroupRef.current.children.forEach((child, i) => {
         if (child.userData.sway) {
-          child.rotation.z = Math.sin(t * 1.6 + i * 0.4) * 0.022;
-          child.rotation.x = Math.cos(t * 1.2 + i * 0.3) * 0.015;
+          swayers.push({ node: child, index: i });
         }
       });
+      swayingChildrenRef.current = swayers;
+    }
+  }, []);
+
+  // Gentle procedural wind sway on foliage (iterating only cached swaying tree nodes)
+  useFrame((state) => {
+    const swayers = swayingChildrenRef.current;
+    if (swayers.length > 0) {
+      const t = state.clock.elapsedTime;
+      for (let j = 0; j < swayers.length; j++) {
+        const item = swayers[j];
+        item.node.rotation.z = Math.sin(t * 1.6 + item.index * 0.4) * 0.022;
+        item.node.rotation.x = Math.cos(t * 1.2 + item.index * 0.3) * 0.015;
+      }
     }
   });
 
@@ -247,6 +262,9 @@ export default function Nature() {
     </group>
   );
 }
+
+const MemoizedNature = React.memo(Nature);
+export default MemoizedNature;
 
 useGLTF.preload(TREES.default);
 useGLTF.preload(TREES.pine);

@@ -77,7 +77,7 @@ function DecorMesh({ decorKey, modelUrl }) {
  * Drives the in-game Day/Night celestial cycle, dynamic sunlight arc,
  * dynamic atmospheric fog, starfield, living player navigation, and rich realms.
  */
-export default function WorldScene({
+function WorldScene({
   activeRegion,
   onSelectRegion,
   realmLevels = { mind: 1, body: 1, craft: 1 },
@@ -99,8 +99,39 @@ export default function WorldScene({
     });
   }, []);
 
+  // Track performance metrics for audit and verification
+  const perfStats = useRef({ frames: 0, lastTime: performance.now(), fps: 60, frameTime: 16.6 });
+
   // Tick the game clock forward and continuously interpolate all lighting on every frame
   useFrame((state, delta) => {
+    const now = performance.now();
+    perfStats.current.frames++;
+    if (now - perfStats.current.lastTime >= 500) {
+      perfStats.current.fps = Math.round((perfStats.current.frames * 1000) / (now - perfStats.current.lastTime));
+      perfStats.current.frameTime = Number((now - perfStats.current.lastTime) / perfStats.current.frames).toFixed(2);
+      perfStats.current.frames = 0;
+      perfStats.current.lastTime = now;
+      
+      let lights = 0;
+      let meshCount = 0;
+      state.scene.traverse((obj) => {
+        if (obj.isLight) lights++;
+        if (obj.isMesh) meshCount++;
+      });
+
+      window.__LIFECRAFT_PERF__ = {
+        fps: perfStats.current.fps,
+        frameTime: Number(perfStats.current.frameTime),
+        drawCalls: state.gl.info.render.calls,
+        triangles: state.gl.info.render.triangles,
+        textures: state.gl.info.memory.textures,
+        geometries: state.gl.info.memory.geometries,
+        lights,
+        meshes: meshCount,
+        dpr: state.gl.getPixelRatio(),
+      };
+    }
+
     const dt = Math.min(delta, 0.05);
     gameClock.tick(dt);
 
@@ -168,7 +199,7 @@ export default function WorldScene({
         intensity={initialMood.ambientIntensity}
       />
 
-      {/* 5. Celestial Sun/Moon Directional Light */}
+      {/* 5. Celestial Sun/Moon Directional Light (Hero Shadow Source) */}
       <directionalLight
         ref={sunLightRef}
         color={initialMood.sunColor}
@@ -177,13 +208,14 @@ export default function WorldScene({
         castShadow
         shadow-mapSize-width={1024}
         shadow-mapSize-height={1024}
-        shadow-camera-near={0.5}
-        shadow-camera-far={60}
-        shadow-camera-left={-14}
-        shadow-camera-right={14}
-        shadow-camera-top={14}
-        shadow-camera-bottom={-14}
-        shadow-bias={-0.0008}
+        shadow-camera-near={1.0}
+        shadow-camera-far={50}
+        shadow-camera-left={-12.5}
+        shadow-camera-right={12.5}
+        shadow-camera-top={12.5}
+        shadow-camera-bottom={-12.5}
+        shadow-bias={-0.0006}
+        shadow-normalBias={0.02}
       />
 
       {/* 6. Soft Opposite Rim/Fill Light */}
@@ -239,7 +271,10 @@ export default function WorldScene({
       />
 
       {/* 10. Ambient Atmospheric Firefly Motes */}
-      <AmbientParticles count={48} />
+      <AmbientParticles count={32} />
     </>
   );
 }
+
+const MemoizedWorldScene = React.memo(WorldScene);
+export default MemoizedWorldScene;

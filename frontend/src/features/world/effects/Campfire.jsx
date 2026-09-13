@@ -8,7 +8,7 @@ import { WORLD_CONFIG } from '../worldConfig';
 /**
  * Procedural Streak Campfire with Dynamic Night Illumination
  */
-export default function Campfire({ isNight = false }) {
+function Campfire({ isNight = false }) {
   const stonesGltf = useGLTF(CAMPFIRE.stones);
   const logsGltf = useGLTF(CAMPFIRE.logs);
 
@@ -151,7 +151,7 @@ export default function Campfire({ isNight = false }) {
         />
       </points>
 
-      {/* Warm Fire Point Light Illuminating Ground & Avatar */}
+      {/* Warm Fire Point Light Illuminating Ground & Avatar (optimized: fill light without expensive cubemap shadow passes) */}
       <pointLight
         ref={lightRef}
         color={WORLD_CONFIG.campfire.light.color}
@@ -159,14 +159,13 @@ export default function Campfire({ isNight = false }) {
         distance={WORLD_CONFIG.campfire.light.distance}
         decay={WORLD_CONFIG.campfire.light.decay}
         position={[0, 0.4, 0]}
-        castShadow
-        shadow-mapSize-width={512}
-        shadow-mapSize-height={512}
-        shadow-bias={-0.002}
       />
     </group>
   );
 }
+
+const MemoizedCampfire = React.memo(Campfire);
+export default MemoizedCampfire;
 
 useGLTF.preload(CAMPFIRE.stones);
 useGLTF.preload(CAMPFIRE.logs);

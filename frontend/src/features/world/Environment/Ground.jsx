@@ -10,7 +10,7 @@ import { WORLD_CONFIG } from '../worldConfig';
  * rich green turf, circular flagstone Central Plaza, and branching pathway spokes
  * connecting Mind, Body, and Craft realms.
  */
-export default function Ground() {
+function Ground() {
   const pathStraightGltf = useGLTF(GROUND.pathStraight);
   const pathBendGltf = useGLTF(GROUND.pathBend);
 
@@ -166,6 +166,9 @@ export default function Ground() {
     </group>
   );
 }
+
+const MemoizedGround = React.memo(Ground);
+export default MemoizedGround;
 
 useGLTF.preload(GROUND.pathStraight);
 useGLTF.preload(GROUND.pathBend);

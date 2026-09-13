@@ -100,9 +100,9 @@ function ArcaneCrystals({ count = 3, intensity = 2.0 }) {
               roughness={0.1}
             />
           </mesh>
-          <pointLight color="#a855f7" intensity={0.6} distance={3.0} />
         </group>
       ))}
+      <pointLight color="#a855f7" intensity={intensity * 0.5} distance={4.5} position={[0, 2.3, 0]} />
     </group>
   );
 }
@@ -114,7 +114,7 @@ function ArcaneCrystals({ count = 3, intensity = 2.0 }) {
  * Level 2: Developed (Arcane Academy, secondary archive tower, arched entry colonnade, obelisk)
  * Level 3: Mastery (Knowledge Citadel, crowning grand spire, reflective scholar fountain, collegiate ramparts)
  */
-export default function MindRealm({ isActive, onSelect, isNight, level = 1 }) {
+function MindRealm({ isActive, onSelect, isNight, level = 1 }) {
   const [hovered, setHovered] = useState(false);
   const lvl2Group = useRef();
   const lvl3Group = useRef();
@@ -264,7 +264,7 @@ export default function MindRealm({ isActive, onSelect, isNight, level = 1 }) {
           {/* Secondary Scholar Archive Tower */}
           <group position={[-1.75, 0, 0.85]} rotation={[0, 0.35, 0]} scale={[1.35, 1.35, 1.35]}>
             <primitive object={archiveScene} />
-            <pointLight color="#fbbf24" intensity={isNight ? 2.2 : 1.2} distance={4.5} position={[0, 1.4, 0]} />
+            {level >= 2 && <pointLight color="#fbbf24" intensity={isNight ? 2.2 : 1.2} distance={4.5} position={[0, 1.4, 0]} />}
           </group>
 
           {/* Arched Stone Gateway Colonnade */}
@@ -275,7 +275,7 @@ export default function MindRealm({ isActive, onSelect, isNight, level = 1 }) {
           {/* Ancient Arcane Knowledge Obelisk */}
           <group position={[1.75, 0, -0.6]} rotation={[0, -0.2, 0]} scale={[1.15, 1.35, 1.15]}>
             <primitive object={obeliskScene} />
-            <pointLight color="#c084fc" intensity={isNight ? 2.0 : 1.0} distance={4.0} position={[0, 1.5, 0]} />
+            {level >= 2 && <pointLight color="#c084fc" intensity={isNight ? 2.0 : 1.0} distance={4.0} position={[0, 1.5, 0]} />}
           </group>
 
           {/* Secondary Courtyard Study Lectern */}
@@ -295,7 +295,7 @@ export default function MindRealm({ isActive, onSelect, isNight, level = 1 }) {
           {/* Majestic Octagonal Grand Spire capping Central Tower */}
           <group position={[0, 3.75, 0]} rotation={rotation} scale={[1.85, 1.85, 1.85]}>
             <primitive object={spireScene} />
-            <pointLight color="#e0e7ff" intensity={isNight ? 3.2 : 1.8} distance={7.0} position={[0, 1.2, 0]} />
+            {level >= 3 && <pointLight color="#e0e7ff" intensity={isNight ? 3.2 : 1.8} distance={7.0} position={[0, 1.2, 0]} />}
           </group>
 
           {/* Fortified Collegiate Ramparts unifying the Citadel */}
@@ -306,14 +306,14 @@ export default function MindRealm({ isActive, onSelect, isNight, level = 1 }) {
           {/* Third Citadel Spire Wing */}
           <group position={[1.85, 0, -1.35]} rotation={[0, -0.5, 0]} scale={[1.25, 1.25, 1.25]}>
             <primitive object={archiveScene.clone(true)} />
-            <pointLight color="#fbbf24" intensity={isNight ? 2.0 : 1.0} distance={4.0} position={[0, 1.2, 0]} />
+            {level >= 3 && <pointLight color="#fbbf24" intensity={isNight ? 2.0 : 1.0} distance={4.0} position={[0, 1.2, 0]} />}
           </group>
 
           {/* Sacred Stone Reflection Fountain in Central Courtyard */}
           <group position={[0.2, 0, 1.25]} scale={[0.85, 0.85, 0.85]}>
             <primitive object={fountainScene} />
             {/* Glowing arcane fountain water light */}
-            <pointLight color="#60a5fa" intensity={isNight ? 2.5 : 1.2} distance={4.5} position={[0, 0.5, 0]} />
+            {level >= 3 && <pointLight color="#60a5fa" intensity={isNight ? 2.5 : 1.2} distance={4.5} position={[0, 0.5, 0]} />}
           </group>
 
           {/* Expanded Citadel Boundary Boulders & Blossoms */}
@@ -328,6 +328,9 @@ export default function MindRealm({ isActive, onSelect, isNight, level = 1 }) {
     </group>
   );
 }
+
+const MemoizedMindRealm = React.memo(MindRealm);
+export default MemoizedMindRealm;
 
 useGLTF.preload(MIND.tower);
 useGLTF.preload(MIND.archiveTower);

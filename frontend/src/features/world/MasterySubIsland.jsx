@@ -14,7 +14,7 @@ import * as THREE from 'three';
  * - Glowing underside levitation core & perimeter lighting
  * - Interactive destination waypoint landmark plaque & crystal beacon
  */
-export default function MasterySubIsland({
+function MasterySubIsland({
   config,
   children,
   floatOffset = 0,
@@ -181,11 +181,13 @@ export default function MasterySubIsland({
               roughness={0.1}
             />
           </mesh>
-          <pointLight
-            color={accentColor}
-            intensity={isActive ? 3.0 : 1.5}
-            distance={5.0}
-          />
+          {(isActive || hovered) && (
+            <pointLight
+              color={accentColor}
+              intensity={isActive ? 3.0 : 1.8}
+              distance={5.0}
+            />
+          )}
         </group>
 
         {/* In-World Landmark Destination Label */}
@@ -284,7 +286,7 @@ export default function MasterySubIsland({
  * bridge that physically spans across the empty void between the main island
  * and the floating sub-island.
  */
-export function SubIslandBridge({
+function SubIslandBridgeComponent({
   start,
   end,
   type = 'mind', // 'mind' | 'body' | 'craft'
@@ -323,12 +325,12 @@ export function SubIslandBridge({
           />
         </mesh>
         {/* Left Stone Railing */}
-        <mesh position={[-0.62, 0.22, 0]} receiveShadow castShadow>
+        <mesh position={[-0.62, 0.22, 0]} receiveShadow>
           <boxGeometry args={[0.12, 0.32, length]} />
           <meshStandardMaterial color="#1e293b" roughness={0.8} />
         </mesh>
         {/* Right Stone Railing */}
-        <mesh position={[0.62, 0.22, 0]} receiveShadow castShadow>
+        <mesh position={[0.62, 0.22, 0]} receiveShadow>
           <boxGeometry args={[0.12, 0.32, length]} />
           <meshStandardMaterial color="#1e293b" roughness={0.8} />
         </mesh>
@@ -358,22 +360,22 @@ export function SubIslandBridge({
           <meshStandardMaterial color="#292524" roughness={0.85} metalness={0.15} />
         </mesh>
         {/* Dark Stone Kerbs */}
-        <mesh position={[-0.72, 0.2, 0]} receiveShadow castShadow>
+        <mesh position={[-0.72, 0.2, 0]} receiveShadow>
           <boxGeometry args={[0.16, 0.28, length]} />
           <meshStandardMaterial color="#1c1917" roughness={0.9} />
         </mesh>
-        <mesh position={[0.72, 0.2, 0]} receiveShadow castShadow>
+        <mesh position={[0.72, 0.2, 0]} receiveShadow>
           <boxGeometry args={[0.16, 0.28, length]} />
           <meshStandardMaterial color="#1c1917" roughness={0.9} />
         </mesh>
         {/* Iron Palisade Guard Posts */}
         {[-length * 0.35, -length * 0.12, length * 0.12, length * 0.35].map((zPos, i) => (
           <group key={i} position={[0, 0.28, zPos]}>
-            <mesh position={[-0.72, 0.14, 0]} castShadow>
+            <mesh position={[-0.72, 0.14, 0]}>
               <cylinderGeometry args={[0.04, 0.05, 0.45, 8]} />
               <meshStandardMaterial color="#44403c" roughness={0.6} metalness={0.6} />
             </mesh>
-            <mesh position={[0.72, 0.14, 0]} castShadow>
+            <mesh position={[0.72, 0.14, 0]}>
               <cylinderGeometry args={[0.04, 0.05, 0.45, 8]} />
               <meshStandardMaterial color="#44403c" roughness={0.6} metalness={0.6} />
             </mesh>
@@ -394,16 +396,16 @@ export function SubIslandBridge({
         <meshStandardMaterial color="#5c3a21" roughness={0.88} />
       </mesh>
       {/* Iron Under-Girder Truss Support */}
-      <mesh position={[0, -0.16, 0]} receiveShadow castShadow>
+      <mesh position={[0, -0.16, 0]} receiveShadow>
         <boxGeometry args={[1.1, 0.15, length * 0.98]} />
         <meshStandardMaterial color="#334155" roughness={0.5} metalness={0.7} />
       </mesh>
       {/* Wooden Handrails */}
-      <mesh position={[-0.66, 0.25, 0]} receiveShadow castShadow>
+      <mesh position={[-0.66, 0.25, 0]} receiveShadow>
         <boxGeometry args={[0.08, 0.35, length]} />
         <meshStandardMaterial color="#451a03" roughness={0.85} />
       </mesh>
-      <mesh position={[0.66, 0.25, 0]} receiveShadow castShadow>
+      <mesh position={[0.66, 0.25, 0]} receiveShadow>
         <boxGeometry args={[0.08, 0.35, length]} />
         <meshStandardMaterial color="#451a03" roughness={0.85} />
       </mesh>
@@ -424,3 +426,8 @@ export function SubIslandBridge({
     </group>
   );
 }
+
+const MemoizedMasterySubIsland = React.memo(MasterySubIsland);
+export default MemoizedMasterySubIsland;
+
+export const SubIslandBridge = React.memo(SubIslandBridgeComponent);

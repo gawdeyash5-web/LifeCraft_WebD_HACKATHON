@@ -186,10 +186,32 @@ const _resAmbientColor = new THREE.Color();
 const _resRimColor = new THREE.Color();
 const _resSkyColor = new THREE.Color();
 const _resFogColor = new THREE.Color();
+const _sunPos = [0, 0, 0];
+
+const _resMood = {
+  phase: CYCLE_PHASES.DAY,
+  gameTime: 0.5,
+  formattedTime: '12:00',
+  isNight: false,
+  sunPosition: _sunPos,
+  sunColor: _resSunColor,
+  sunIntensity: 2.0,
+  ambientColor: _resAmbientColor,
+  ambientIntensity: 1.0,
+  rimColor: _resRimColor,
+  rimIntensity: 0.4,
+  sky: _resSkyColor,
+  fog: _resFogColor,
+  starsOpacity: 0.0,
+  sunX: 0,
+  sunY: 0,
+  sunZ: 14.0,
+};
 
 /**
  * Calculates continuous, smoothly interpolated lighting, sun position, and sky mood
  * based on current gameTime (0.0 to 1.0). Zero discrete jumps between frames.
+ * Completely allocation-free per frame.
  */
 export function getCycleMood(gameTime) {
   const t = Math.max(0, Math.min(1, gameTime));
@@ -241,6 +263,10 @@ export function getCycleMood(gameTime) {
   const sunY = Math.sin(sunAngle) * sunDist;
   const sunZ = 14.0;
 
+  _sunPos[0] = sunX;
+  _sunPos[1] = Math.max(sunY, -8);
+  _sunPos[2] = sunZ;
+
   // Format in-game 24h clock for HUD
   const totalMinutes = Math.floor(t * 24 * 60);
   const hours = Math.floor(totalMinutes / 60);
@@ -259,24 +285,18 @@ export function getCycleMood(gameTime) {
   }
   const isNight = phase === CYCLE_PHASES.NIGHT;
 
-  return {
-    phase,
-    gameTime: t,
-    formattedTime,
-    isNight,
-    sunPosition: [sunX, Math.max(sunY, -8), sunZ],
-    sunColor: _resSunColor,
-    sunIntensity,
-    ambientColor: _resAmbientColor,
-    ambientIntensity,
-    rimColor: _resRimColor,
-    rimIntensity,
-    sky: _resSkyColor,
-    fog: _resFogColor,
-    starsOpacity,
-    sunX,
-    sunY,
-    sunZ,
-  };
+  _resMood.phase = phase;
+  _resMood.gameTime = t;
+  _resMood.formattedTime = formattedTime;
+  _resMood.isNight = isNight;
+  _resMood.sunIntensity = sunIntensity;
+  _resMood.ambientIntensity = ambientIntensity;
+  _resMood.rimIntensity = rimIntensity;
+  _resMood.starsOpacity = starsOpacity;
+  _resMood.sunX = sunX;
+  _resMood.sunY = sunY;
+  _resMood.sunZ = sunZ;
+
+  return _resMood;
 }
 

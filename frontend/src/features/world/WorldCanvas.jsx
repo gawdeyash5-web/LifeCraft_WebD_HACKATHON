@@ -119,9 +119,30 @@ function GameClockWidget() {
 }
 
 /**
- * Upgraded 3D World Canvas
+ * Adaptive DPR computation:
+ * Low-end hardware: ~1.0 - 1.15
+ * Normal hardware: ~1.25 - 1.35
+ * High-end hardware: capped at 1.5 to prevent massive 4K fill-rate penalty
  */
-export default function WorldCanvas({
+function getOptimalDpr() {
+  if (typeof window === 'undefined') return 1;
+  const rawDpr = window.devicePixelRatio || 1;
+  const cores = navigator.hardwareConcurrency || 4;
+  const isMobile = typeof navigator !== 'undefined' && /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+
+  if (isMobile || cores <= 4) {
+    return Math.max(1, Math.min(rawDpr, 1.15));
+  }
+  if (cores <= 8) {
+    return Math.max(1, Math.min(rawDpr, 1.35));
+  }
+  return Math.max(1, Math.min(rawDpr, 1.5));
+}
+
+/**
+ * Upgraded 3D World Canvas (Memoized to isolate 3D viewport from HUD re-renders)
+ */
+function WorldCanvasComponent({
   activeRegion = null,
   onSelectRegion,
   realmLevels = { mind: 1, body: 1, craft: 1 },
@@ -131,6 +152,7 @@ export default function WorldCanvas({
   masteryExpansions = [],
 }) {
   const isRealmFocused = Boolean(activeRegion && activeRegion !== 'overview');
+  const dprRange = React.useMemo(() => [1, getOptimalDpr()], []);
 
   return (
     <div className="relative w-full h-full overflow-hidden select-none">
@@ -138,7 +160,7 @@ export default function WorldCanvas({
       <Suspense fallback={<CanvasLoadingFallback />}>
         <Canvas
           shadows
-          dpr={[1, 2]}
+          dpr={dprRange}
           camera={{
             position: WORLD_CONFIG.camera.defaultPosition,
             fov: WORLD_CONFIG.camera.fov,
@@ -149,6 +171,7 @@ export default function WorldCanvas({
             antialias: true,
             alpha: true,
             powerPreference: 'high-performance',
+            stencil: false,
           }}
           style={{ width: '100%', height: '100%', display: 'block' }}
         >
@@ -191,3 +214,6 @@ export default function WorldCanvas({
     </div>
   );
 }
+
+const WorldCanvas = React.memo(WorldCanvasComponent);
+export default WorldCanvas;

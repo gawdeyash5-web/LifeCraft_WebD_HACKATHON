@@ -56,51 +56,45 @@ function ArtisanWorkbench({ position = [0, 0, 0], rotation = [0, 0, 0] }) {
 }
 
 /**
- * Rising Smoke & Ember Particles from Industrial Smelting Chimney
+ * Rising Smoke & Ember Particles from Industrial Smelting Chimney (optimized points)
  */
 function ChimneyEmbers({ position = [0, 0, 0] }) {
-  const embersRef = useRef();
-
+  const pointsRef = useRef();
   const count = 16;
-  const emberData = useMemo(() => {
-    const list = [];
+  const [positions, speeds, wobbles] = useMemo(() => {
+    const pos = new Float32Array(count * 3);
+    const spd = new Float32Array(count);
+    const wob = new Float32Array(count);
     for (let i = 0; i < count; i++) {
-      list.push({
-        x: (Math.random() - 0.5) * 0.2,
-        y: Math.random() * 1.5,
-        z: (Math.random() - 0.5) * 0.2,
-        speed: 0.8 + Math.random() * 1.2,
-        wobble: Math.random() * Math.PI * 2,
-      });
+      pos[i * 3 + 0] = (Math.random() - 0.5) * 0.2;
+      pos[i * 3 + 1] = Math.random() * 1.5;
+      pos[i * 3 + 2] = (Math.random() - 0.5) * 0.2;
+      spd[i] = 0.8 + Math.random() * 1.2;
+      wob[i] = Math.random() * Math.PI * 2;
     }
-    return list;
+    return [pos, spd, wob];
   }, []);
 
   useFrame((state, delta) => {
-    if (!embersRef.current) return;
+    if (!pointsRef.current) return;
     const t = state.clock.elapsedTime;
-    embersRef.current.children.forEach((child, i) => {
-      const d = emberData[i];
-      d.y += delta * d.speed;
-      if (d.y > 1.8) d.y = 0;
-      child.position.set(
-        d.x + Math.sin(t * 2 + d.wobble) * 0.08,
-        d.y,
-        d.z + Math.cos(t * 2 + d.wobble) * 0.08
-      );
-      child.scale.setScalar(Math.max(0, 1.0 - d.y / 1.8));
-    });
+    const pos = pointsRef.current.geometry.attributes.position.array;
+    for (let i = 0; i < count; i++) {
+      pos[i * 3 + 1] += delta * speeds[i];
+      if (pos[i * 3 + 1] > 1.8) pos[i * 3 + 1] = 0;
+      pos[i * 3 + 0] += Math.sin(t * 2 + wobbles[i]) * 0.002;
+      pos[i * 3 + 2] += Math.cos(t * 2 + wobbles[i]) * 0.002;
+    }
+    pointsRef.current.geometry.attributes.position.needsUpdate = true;
   });
 
   return (
-    <group position={position} ref={embersRef}>
-      {emberData.map((_, i) => (
-        <mesh key={i}>
-          <boxGeometry args={[0.04, 0.04, 0.04]} />
-          <meshBasicMaterial color="#fb923c" transparent opacity={0.8} />
-        </mesh>
-      ))}
-    </group>
+    <points ref={pointsRef} position={position}>
+      <bufferGeometry>
+        <bufferAttribute attach="attributes-position" count={count} array={positions} itemSize={3} />
+      </bufferGeometry>
+      <pointsMaterial size={0.055} color="#fb923c" transparent opacity={0.85} blending={THREE.AdditiveBlending} />
+    </points>
   );
 }
 
@@ -111,7 +105,7 @@ function ChimneyEmbers({ position = [0, 0, 0] }) {
  * Level 2: Developed (Artisan Forge, towering mechanical windmill, supply cart, timber lumber stacks)
  * Level 3: Mastery (Engineering Foundry, blazing smelting chimney, masterwork vault chest, industrial lanterns)
  */
-export default function CraftRealm({ isActive, onSelect, isNight, level = 1 }) {
+function CraftRealm({ isActive, onSelect, isNight, level = 1 }) {
   const [hovered, setHovered] = useState(false);
   const lvl2Group = useRef();
   const lvl3Group = useRef();
@@ -262,7 +256,7 @@ export default function CraftRealm({ isActive, onSelect, isNight, level = 1 }) {
           {/* Towering Mechanical Windmill Generator */}
           <group position={[1.8, 0, 2.0]} rotation={[0, -Math.PI * 0.4, 0]} scale={[1.25, 1.25, 1.25]}>
             <primitive object={windmillScene} />
-            <pointLight color="#f59e0b" intensity={isNight ? 2.2 : 1.1} distance={4.5} position={[0, 1.8, 0]} />
+            {level >= 2 && <pointLight color="#f59e0b" intensity={isNight ? 2.2 : 1.1} distance={4.5} position={[0, 1.8, 0]} />}
           </group>
 
           {/* Material Transport Supply Cart */}
@@ -287,25 +281,25 @@ export default function CraftRealm({ isActive, onSelect, isNight, level = 1 }) {
           <group position={[1.9, 0, -1.4]} rotation={[0, Math.PI * 0.25, 0]} scale={[1.5, 1.5, 1.5]}>
             <primitive object={chimneyScene} />
             {/* Blazing furnace fire light */}
-            <pointLight color="#ea580c" intensity={isNight ? 3.5 : 2.0} distance={5.0} position={[0, 0.8, 0]} />
+            {level >= 3 && <pointLight color="#ea580c" intensity={isNight ? 3.5 : 2.0} distance={5.0} position={[0, 0.8, 0]} />}
             {/* Rising chimney smoke motes */}
-            <ChimneyEmbers position={[0, 1.6, 0]} />
+            {level >= 3 && <ChimneyEmbers position={[0, 1.6, 0]} />}
           </group>
 
           {/* Masterwork Brass Treasure Vault Chest */}
           <group position={[-0.55, 0, -1.9]} rotation={[0, Math.PI * 0.15, 0]} scale={[1.3, 1.3, 1.3]}>
             <primitive object={chestScene} />
-            <pointLight color="#fbbf24" intensity={isNight ? 1.8 : 0.9} distance={3.0} position={[0, 0.4, 0]} />
+            {level >= 3 && <pointLight color="#fbbf24" intensity={isNight ? 1.8 : 0.9} distance={3.0} position={[0, 0.4, 0]} />}
           </group>
 
           {/* Dual Brass Industrial Street Lanterns */}
           <group position={[-2.1, 0, 0.8]} scale={[1.2, 1.2, 1.2]}>
             <primitive object={lanternScene} />
-            <pointLight color="#fbbf24" intensity={isNight ? 2.4 : 1.0} distance={4.0} position={[0, 1.4, 0]} />
+            {level >= 3 && <pointLight color="#fbbf24" intensity={isNight ? 2.4 : 1.0} distance={4.0} position={[0, 1.4, 0]} />}
           </group>
           <group position={[0.4, 0, 2.3]} scale={[1.2, 1.2, 1.2]}>
             <primitive object={lanternScene.clone(true)} />
-            <pointLight color="#fbbf24" intensity={isNight ? 2.4 : 1.0} distance={4.0} position={[0, 1.4, 0]} />
+            {level >= 3 && <pointLight color="#fbbf24" intensity={isNight ? 2.4 : 1.0} distance={4.0} position={[0, 1.4, 0]} />}
           </group>
 
           {/* Heavy Granite Foundry Boulders */}
@@ -317,6 +311,9 @@ export default function CraftRealm({ isActive, onSelect, isNight, level = 1 }) {
     </group>
   );
 }
+
+const MemoizedCraftRealm = React.memo(CraftRealm);
+export default MemoizedCraftRealm;
 
 useGLTF.preload(CRAFT.watermill);
 useGLTF.preload(CRAFT.windmill);

@@ -57,49 +57,45 @@ function LibraryFloatingCrystals({ position = [0, 0, 0] }) {
 }
 
 /**
- * Animated Rising Forge Embers for Foundry
+ * Animated Rising Forge Embers for Foundry (optimized points)
  */
 function FoundryEmbers({ position = [0, 0, 0] }) {
-  const embersRef = useRef();
-  const emberData = useMemo(() => {
-    const arr = [];
-    for (let i = 0; i < 16; i++) {
-      arr.push({
-        x: (Math.random() - 0.5) * 0.5,
-        y: Math.random() * 2.0,
-        z: (Math.random() - 0.5) * 0.5,
-        speed: 0.6 + Math.random() * 0.8,
-        wobble: Math.random() * Math.PI * 2,
-      });
+  const pointsRef = useRef();
+  const count = 16;
+  const [positions, speeds, wobbles] = useMemo(() => {
+    const pos = new Float32Array(count * 3);
+    const spd = new Float32Array(count);
+    const wob = new Float32Array(count);
+    for (let i = 0; i < count; i++) {
+      pos[i * 3 + 0] = (Math.random() - 0.5) * 0.5;
+      pos[i * 3 + 1] = Math.random() * 2.0;
+      pos[i * 3 + 2] = (Math.random() - 0.5) * 0.5;
+      spd[i] = 0.6 + Math.random() * 0.8;
+      wob[i] = Math.random() * Math.PI * 2;
     }
-    return arr;
+    return [pos, spd, wob];
   }, []);
 
   useFrame((state, delta) => {
-    if (!embersRef.current) return;
+    if (!pointsRef.current) return;
     const t = state.clock.elapsedTime;
-    embersRef.current.children.forEach((child, i) => {
-      const d = emberData[i];
-      d.y += delta * d.speed;
-      if (d.y > 2.2) d.y = 0;
-      child.position.set(
-        d.x + Math.sin(t * 2 + d.wobble) * 0.1,
-        d.y,
-        d.z + Math.cos(t * 2 + d.wobble) * 0.1
-      );
-      child.scale.setScalar(Math.max(0, 1.0 - d.y / 2.2));
-    });
+    const pos = pointsRef.current.geometry.attributes.position.array;
+    for (let i = 0; i < count; i++) {
+      pos[i * 3 + 1] += delta * speeds[i];
+      if (pos[i * 3 + 1] > 2.2) pos[i * 3 + 1] = 0;
+      pos[i * 3 + 0] += Math.sin(t * 2 + wobbles[i]) * 0.003;
+      pos[i * 3 + 2] += Math.cos(t * 2 + wobbles[i]) * 0.003;
+    }
+    pointsRef.current.geometry.attributes.position.needsUpdate = true;
   });
 
   return (
-    <group position={position} ref={embersRef}>
-      {emberData.map((_, i) => (
-        <mesh key={i}>
-          <boxGeometry args={[0.045, 0.045, 0.045]} />
-          <meshBasicMaterial color="#f97316" transparent opacity={0.85} />
-        </mesh>
-      ))}
-    </group>
+    <points ref={pointsRef} position={position}>
+      <bufferGeometry>
+        <bufferAttribute attach="attributes-position" count={count} array={positions} itemSize={3} />
+      </bufferGeometry>
+      <pointsMaterial size={0.065} color="#f97316" transparent opacity={0.9} blending={THREE.AdditiveBlending} />
+    </points>
   );
 }
 
@@ -157,9 +153,8 @@ function CelestialLibraryWing() {
       {/* 6. Orbiting Arcane Crystals */}
       <LibraryFloatingCrystals position={[0, 2.6, -0.4]} />
 
-      {/* 7. Luminous Arcane Lighting */}
-      <pointLight color="#818cf8" intensity={2.8} distance={7.0} position={[0, 2.2, 0]} />
-      <pointLight color="#c084fc" intensity={2.0} distance={5.0} position={[1.4, 1.2, -0.8]} />
+      {/* 7. Luminous Arcane Lighting (consolidated single light) */}
+      <pointLight color="#818cf8" intensity={3.2} distance={8.0} position={[0.4, 2.0, -0.4]} />
     </group>
   );
 }
@@ -226,9 +221,8 @@ function GladiatorialColiseumExpansion() {
         <primitive object={flagScene} />
       </group>
 
-      {/* 7. Warm Burning Torchlight */}
-      <pointLight color="#f97316" intensity={3.0} distance={7.0} position={[0, 1.8, 0]} />
-      <pointLight color="#ef4444" intensity={1.8} distance={5.0} position={[0, 0.8, -1.2]} />
+      {/* 7. Warm Burning Torchlight (consolidated single light) */}
+      <pointLight color="#f97316" intensity={3.5} distance={8.0} position={[0, 1.6, -0.4]} />
     </group>
   );
 }
@@ -285,9 +279,8 @@ function FoundryExpansion() {
         <primitive object={lanternScene} />
       </group>
 
-      {/* 7. Radiant Furnace Flame & Hearth Lighting */}
-      <pointLight color="#f59e0b" intensity={3.2} distance={7.5} position={[-0.9, 1.8, -0.8]} />
-      <pointLight color="#ea580c" intensity={2.4} distance={6.0} position={[0.6, 1.4, -0.2]} />
+      {/* 7. Radiant Furnace Flame & Hearth Lighting (consolidated single light) */}
+      <pointLight color="#f59e0b" intensity={3.6} distance={8.5} position={[-0.4, 1.6, -0.4]} />
     </group>
   );
 }
@@ -298,7 +291,7 @@ function FoundryExpansion() {
  * Renders separate floating sub-islands and spanning bridges when unlocked
  * either genuinely by the player or temporarily through Developer Preview.
  */
-export default function MasteryExpansions({
+function MasteryExpansions({
   expansions = [],
   activeRegion = null,
   onSelectRegion = null,
@@ -368,3 +361,6 @@ export default function MasteryExpansions({
     </group>
   );
 }
+
+const MemoizedMasteryExpansions = React.memo(MasteryExpansions);
+export default MemoizedMasteryExpansions;

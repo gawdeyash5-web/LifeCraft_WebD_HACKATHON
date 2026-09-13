@@ -13,7 +13,7 @@ import RealmRing from '../effects/RealmRing';
  * Level 2: Developed (Combat Dojo, elevated sparring platform, calisthenics ladder, arena fence, dual targets)
  * Level 3: Mastery (Grand Coliseum, athletic basecamp pavilion tent, pillars of discipline, victory banners)
  */
-export default function BodyRealm({ isActive, onSelect, isNight, level = 1 }) {
+function BodyRealm({ isActive, onSelect, isNight, level = 1 }) {
   const [hovered, setHovered] = useState(false);
   const lvl2Group = useRef();
   const lvl3Group = useRef();
@@ -208,7 +208,7 @@ export default function BodyRealm({ isActive, onSelect, isNight, level = 1 }) {
           {/* Athletic Basecamp Pavilion Tent */}
           <group position={[-1.8, 0, 1.6]} rotation={[0, Math.PI * 0.4, 0]} scale={[1.35, 1.35, 1.35]}>
             <primitive object={tentScene} />
-            <pointLight color="#f59e0b" intensity={isNight ? 2.5 : 1.2} distance={4.5} position={[0, 1.2, 0]} />
+            {level >= 3 && <pointLight color="#f59e0b" intensity={isNight ? 2.5 : 1.2} distance={4.5} position={[0, 1.2, 0]} />}
           </group>
 
           {/* Monumental Stone Pillars of Strength & Discipline */}
@@ -236,6 +236,9 @@ export default function BodyRealm({ isActive, onSelect, isNight, level = 1 }) {
     </group>
   );
 }
+
+const MemoizedBodyRealm = React.memo(BodyRealm);
+export default MemoizedBodyRealm;
 
 useGLTF.preload(BODY.structure);
 useGLTF.preload(BODY.target);
