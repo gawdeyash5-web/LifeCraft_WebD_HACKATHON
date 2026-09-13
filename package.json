@@ -6,7 +6,7 @@
   "description": "LifeCraft - Gamified Real-Life Productivity RPG with 3D World Visualization",
   "scripts": {
     "build": "npm run build:frontend",
-    "build:frontend": "npm ci --prefix frontend && npm run build --prefix frontend",
+    "build:frontend": "npm ci --include=dev --prefix frontend && npm run build --prefix frontend",
     "install:all": "npm install && npm install --prefix backend && npm install --prefix frontend",
     "dev": "concurrently -n \"BACKEND,FRONTEND\" -c \"cyan,magenta\" \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:backend": "npm run dev --prefix backend",

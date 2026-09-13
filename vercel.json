@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "installCommand": "npm install && npm ci --prefix frontend",
+  "installCommand": "npm install && npm ci --include=dev --prefix frontend",
   "buildCommand": "npm run build:frontend",
   "outputDirectory": "frontend/dist",
   "rewrites": [
