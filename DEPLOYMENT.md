@@ -1,199 +1,170 @@
-# LIFECRAFT — Production Deployment Guide: Vercel + Railway
+# LIFECRAFT — Full-Stack Vercel + Neon PostgreSQL Deployment Guide
 
-This guide details the two-service cloud production deployment architecture for **LIFECRAFT**:
-- **Frontend**: Hosted on [Vercel](https://vercel.com) (Vite SPA)
-- **Backend**: Hosted on [Railway](https://railway.app) (Node/Express API)
-- **Database**: Railway Managed PostgreSQL attached directly to the Backend service
+This guide details the single-project, full-stack cloud production deployment architecture for **LIFECRAFT**:
+- **Hosting Platform**: [Vercel](https://vercel.com) (Full-Stack Monorepo)
+  - **Frontend**: React + Vite SPA built to `frontend/dist`
+  - **Backend API**: Node/Express Serverless Function executed via `api/index.js`
+- **Database**: [Neon](https://neon.tech) (Serverless, persistent PostgreSQL)
 
 ---
 
 ## 1. Target Architecture Overview
 
 ```
-                               ┌────────────────────────┐
-                               │   Vercel Edge CDN      │
-                               │   (Frontend Web App)   │
-                               │  lifecraft.vercel.app  │
-                               └───────────┬────────────┘
-                                           │
-                        HTTPS / JSON       │  Authorization: Bearer <JWT>
-                        CORS: FRONTEND_URL │  VITE_API_URL
-                                           ▼
-                               ┌────────────────────────┐
-                               │   Railway Service      │
-                               │   (Node/Express API)   │
-                               │   GET /health → 200 ok │
-                               └───────────┬────────────┘
-                                           │
-                               TCP / SSL   │  DATABASE_URL
-                               Pool: 10    │  Automated schema init
-                                           ▼
-                               ┌────────────────────────┐
-                               │   Railway PostgreSQL   │
-                               │   (Persistent Storage) │
-                               └────────────────────────┘
+                               ┌────────────────────────────────────────────────────────┐
+                               │                      VERCEL PROJECT                    │
+                               │                https://your-app.vercel.app             │
+                               │                                                        │
+                               │   ┌─────────────────────┐    ┌─────────────────────┐   │
+                               │   │   Static Frontend   │    │  Serverless API     │   │
+                               │   │   (React / Vite)    │    │  (Node / Express)   │   │
+                               │   │   frontend/dist     │    │  api/index.js       │   │
+                               │   └──────────┬──────────┘    └──────────┬──────────┘   │
+                               │              │ Same Domain              │              │
+                               │              │ /api requests            │              │
+                               │              └──────────────────────────┘              │
+                               └───────────────────────────┬────────────────────────────┘
+                                                           │
+                                                           │ TCP / SSL
+                                                           │ DATABASE_URL (Pooled)
+                                                           ▼
+                               ┌────────────────────────────────────────────────────────┐
+                               │                   NEON POSTGRESQL                      │
+                               │        ep-xyz-pooler.region.aws.neon.tech              │
+                               │      (Persistent Serverless Database Storage)          │
+                               └────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 2. Service 1: Frontend (Vercel)
+## 2. Vercel Project Configuration
 
-### Project Configuration
-- **Platform**: Vercel
-- **Framework Preset**: Vite
-- **Root Directory**: `frontend`
-- **Build Command**: `npm run build` (or `npm run build --prefix frontend` from repository root)
-- **Output Directory**: `dist`
-- **Install Command**: `npm install`
-- **Routing Configuration**: Handled by `frontend/vercel.json` (rewrites all routes to `/index.html` for single-page app client-side routing)
+### Monorepo Setup & Root Settings
+When importing your repository from GitHub into Vercel:
 
-### Environment Variables
-Configure under **Project Settings → Environment Variables**:
+| Setting | Value | Description |
+|---|---|---|
+| **Root Directory** | `.` (Repository root) | Deploy from root to encompass both `frontend/`, `backend/`, and `api/`. |
+| **Framework Preset** | `Vite` | Automatically detected by Vercel. |
+| **Build Command** | `npm run build` | Runs `npm run build --prefix frontend` to compile Vite static assets. |
+| **Output Directory** | `frontend/dist` | Points to Vite production build artifacts. |
+| **Install Command** | `npm install` | Installs root dependencies for `@vercel/node` runtime. |
 
-| Variable | Required | Value Example | Description |
-|---|---|---|---|
-| `VITE_API_URL` | **Yes** | `https://your-backend.up.railway.app/api` | Full public URL of the Railway backend API, including `/api`. |
-
-### Static 3D Assets
-All 3D models, textures, skyboxes, and colormaps are strictly bundled in:
-```
-frontend/public/assets/world/
-├── buildings/      # Realm spires, academies, coliseums, foundries
-├── characters/     # Archer, Sage Wanderer, Champion Knight, Artisan Crafter models & textures
-├── environment/    # Bridges, platforms, island terrain
-├── nature/         # Foliage, trees, rocks
-├── pets/           # Companion pets (Fox, Lion, Panda, Cat) & colormaps
-├── props/          # Banners, fountains, lanterns, marketplace stalls
-└── skybox/         # Procedural and texture assets
-```
-There is **zero** runtime dependency on `assets_lib/`.
-
----
-
-## 3. Service 2: Backend (Railway)
-
-### Project Configuration
-- **Platform**: Railway
-- **Root Directory**: `backend` (or set Railway Watch Paths to `/backend/**`)
-- **Build Command**: `npm install`
-- **Start Command**: `npm start` (executes `node src/server.js`)
-- **Health Check Endpoint**: `/health` (returns `{"status":"ok"}` with HTTP 200)
-
-### Environment Variables
-Configure under **Variables** in your Railway Backend service:
-
-| Variable | Required | Default / Example | Description |
-|---|---|---|---|
-| `PORT` | **Yes** | Provided by Railway (`$PORT`) | Express server port (automatically allocated by Railway). |
-| `NODE_ENV` | **Yes** | `production` | Sets server to production mode (enables secure error sanitization). |
-| `FRONTEND_URL` | **Yes** | `https://your-frontend.vercel.app` | Vercel production domain for strict CORS credentials verification. |
-| `DATABASE_URL` | **Yes** | `${{Postgres.DATABASE_URL}}` | Connection string to Railway PostgreSQL. |
-| `JWT_SECRET` | **Yes** | Generated 64-char string | Cryptographic secret for signing player JWT authentication tokens. |
-| `JWT_EXPIRES_IN`| Optional | `7d` | Token lifetime duration. |
-
-### Health Check Endpoint
-- **Path**: `GET /health`
-- **Expected Status**: `200 OK`
-- **Response**:
-  ```json
-  {
-    "status": "ok"
-  }
-  ```
-- **Alternative Path**: `GET /api/health` (returns detailed status for observability)
-
----
-
-## 4. Service 3: Database (Railway PostgreSQL)
-
-### Provisioning
-1. In the Railway project dashboard, click **New → Database → Add PostgreSQL**.
-2. Railway creates a managed PostgreSQL instance and exposes the internal connection string variable `DATABASE_URL`.
-3. In the Backend service settings, reference or attach the variable:
-   `DATABASE_URL=${{Postgres.DATABASE_URL}}`
-
-### Automated Schema Initialization
-On server startup, `backend/src/database/db.js` runs `initDatabaseSchema()`:
-1. Executes cosmetic item deduplication and enforces the unique constraint:
-   `CREATE UNIQUE INDEX IF NOT EXISTS idx_items_asset_key ON items(asset_key)`
-2. Safely executes `backend/src/database/schema.sql` which provisions:
-   - `users` (Account credentials, hashed passwords)
-   - `players` (RPG stats, level, xp, gold, streak, realm XP, equipped skins/pets/decor, mastery expansions)
-   - `quests` (Productivity quests & mastery side quests)
-   - `items` (Cosmetic catalog with unique `asset_key` constraints)
-   - `inventories` (Purchased items & ownership mapping with `UNIQUE(user_id, item_id)`)
-   - `achievements` & `user_achievements` (Trophies & milestones)
-   - `events` (Activity timeline audit log)
-3. Seeds all catalog items and achievements with `ON CONFLICT` guards.
-
-### Persistence Guarantee
-- Production uses persistent Railway PostgreSQL over TCP with SSL (`rejectUnauthorized: false`).
-- Embedded `PGlite` (`backend/data/lifecraft_pg`) is **never** used in production; if `DATABASE_URL` is missing or fails in production, the backend intentionally throws an error on startup to prevent silent fallback to ephemeral container disk.
-
----
-
-## 5. CORS Configuration
-
-The production authentication flow requires cross-origin credentialed requests from Vercel to Railway:
-```
-Vercel Frontend (https://lifecraft.vercel.app)
-       │
-       ▼ Authorization: Bearer <token>
-Railway Backend API (https://lifecraft-api.up.railway.app)
-```
-
-- In `backend/src/server.js`, CORS is configured with:
-  - Allowed origin matches `process.env.FRONTEND_URL` exactly.
-  - Wildcard `*` is strictly disabled in production.
-  - Allowed methods: `GET, POST, PUT, DELETE, PATCH, OPTIONS`.
-  - Allowed headers: `Content-Type, Authorization, X-Requested-With`.
-  - `credentials: true`.
-
----
-
-## 6. Authentication & Token Flow
-
-1. **Registration**: `POST /api/auth/register` creates user and initializes player profile with starting attributes, gold, and skin.
-2. **Login**: `POST /api/auth/login` verifies bcrypt password hash and returns JWT token.
-3. **Frontend Storage**: Frontend stores JWT in `localStorage` under `lifecraft_token`.
-4. **Subsequent API Requests**: All requests attach `Authorization: Bearer <token>` in headers.
-5. **Token Expiry / Refresh**: Tokens remain valid for `7d`. On logout (`POST /api/auth/logout`), frontend cleanses `localStorage` and resets player state.
-
----
-
-## 7. Production Error Handling
-
-In `backend/src/middleware/errorHandler.js`:
-- In `production` (`NODE_ENV=production`), all HTTP 500 errors are sanitized to:
-  ```json
-  {
-    "success": false,
-    "data": null,
-    "error": {
-      "code": "INTERNAL_SERVER_ERROR",
-      "message": "An unexpected server error occurred. Please try again later."
+### Routing (`vercel.json`)
+The root `vercel.json` ensures that API requests are prioritized and routed to the serverless function, while client-side routes fallback to the Vite SPA:
+```json
+{
+  "version": 2,
+  "buildCommand": "npm run build:frontend",
+  "outputDirectory": "frontend/dist",
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api"
+    },
+    {
+      "source": "/health",
+      "destination": "/api"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
-  }
-  ```
-- Raw database errors, SQL syntax strings, stack traces, and local filesystem paths are logged to Railway server stdout only and never leaked in HTTP responses.
+  ]
+}
+```
 
 ---
 
-## 8. Verification & Pre-Deployment Checklist
+## 3. Neon PostgreSQL Configuration
+
+### 1. Provisioning
+1. Sign up or log into [Neon](https://neon.tech).
+2. Click **Create Project**, name it `lifecraft`, and choose your closest AWS region.
+3. In your Neon Dashboard, locate the **Connection Details** widget.
+4. Select the **Pooled connection** checkbox (e.g. `ep-xyz-pooler.us-east-2.aws.neon.tech`).
+5. Copy the connection string:
+   ```
+   postgresql://<user>:<password>@<ep-xyz-pooler>.<region>.aws.neon.tech/<dbname>?sslmode=require
+   ```
+
+### 2. Serverless Pooling Architecture
+LIFECRAFT's database adapter (`backend/src/database/db.js`) is tuned for serverless execution:
+- **Global Pool Caching**: Cached on `globalThis.__lifecraft_pool` to reuse connections across warm lambda invocations.
+- **Connection Limits**: Default `max: 10` (customizable via `DB_POOL_MAX`) with `idleTimeoutMillis: 30000` to prevent exhausting Neon connection quotas.
+- **SSL**: Automatically enabled (`rejectUnauthorized: false`) for cloud-hosted endpoints.
+
+### 3. Serverless-Safe Schema Initialization
+- **Controlled Cold Start**: On function cold start, `ensureDbInitialized()` runs a lightweight probe query (`SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'items'`).
+- If tables already exist and have rows, the heavy `schema.sql` and seeding are **completely bypassed** (~5ms).
+- If tables do not exist (first run), the schema, cosmetic catalog, and achievements are idempotently initialized with `ON CONFLICT` guards.
+- **Manual Initialization Option**: You can run `npm run db:init` locally with `DATABASE_URL` set to provision the schema beforehand.
+
+---
+
+## 4. Production Environment Variables
+
+Configure under **Project Settings → Environment Variables** in the Vercel Dashboard:
+
+| Variable | Required | Example | Description |
+|---|---|---|---|
+| `DATABASE_URL` | **Yes** | `postgresql://user:pass@ep-xyz-pooler.us-east-2.aws.neon.tech/neondb?sslmode=require` | Neon PostgreSQL pooled connection string. |
+| `JWT_SECRET` | **Yes** | `64_char_cryptographically_secure_random_string` | Secret key for signing and verifying player session JWT tokens. |
+| `JWT_EXPIRES_IN` | Optional | `7d` | Session lifetime (default: 7 days). |
+| `NODE_ENV` | **Yes** | `production` | Enforces production security checks and error sanitization. |
+| `DB_POOL_MAX` | Optional | `10` | Maximum connections per serverless container instance. |
+| `FRONTEND_URL` | Optional | `https://your-project.vercel.app` | Production origin. (Same-origin and `*.vercel.app` preview domains are automatically allowed). |
+
+> [!NOTE]
+> `VITE_API_URL` is **not** required in full-stack Vercel deployments. The frontend automatically sends API requests to relative `/api`, which resolves seamlessly to the backend serverless function on the same origin.
+
+---
+
+## 5. Security & Error Handling
+
+- **Error Sanitization**: In production, all unhandled 500-level errors return a sanitized message (`"An unexpected server error occurred. Please try again later."`) without leaking database internals, SQL queries, stack traces, or server filesystem paths.
+- **Stateless Architecture**: No dependence on local disk writes (`backend/data/` is only used for local development fallback with PGlite).
+- **Demo Passcode**: Developer View is protected by the demo passcode `LIFECRAFT`.
+
+---
+
+## 6. Pre-Deployment Verification Checklist
 
 Before deploying:
 
 1. **Frontend Production Build**:
    ```bash
-   npm run build --prefix frontend
+   npm run build
    ```
-   Must succeed with exit code 0.
-2. **Backend Health Check**:
+   Must complete with exit code 0.
+2. **Backend Tests**:
    ```bash
-   curl http://localhost:5000/health
-   # Response: {"status":"ok"}
+   node backend/src/progression/progressionService.test.js
+   node backend/src/quests/questLogic.test.js
    ```
-3. **Database Connectivity**:
-   Ensure `DATABASE_URL` connects with SSL.
-4. **Auth Flow**:
-   Register a new user, log in, create a quest, complete it, earn XP and gold, purchase a pet in the shop, equip it, reload the page, and verify all data persists across sessions.
+   Both test suites must pass.
+3. **Vercel Serverless Function Local Test**:
+   Test `api/index.js` response on `/health` and `/api/health`.
+4. **Static 3D Assets**:
+   Verify all models and textures exist under `frontend/public/assets/world/`.
+
+---
+
+## 7. Step-by-Step Vercel Deployment
+
+1. **Push to GitHub**: Push latest `main` branch to your repository.
+2. **Import into Vercel**:
+   - Go to [vercel.com/new](https://vercel.com/new).
+   - Select your `LifeCraft_WebD_HACKATHON` repository.
+   - Leave Root Directory as `.` (root).
+   - Framework preset will detect `Vite`.
+3. **Set Environment Variables**:
+   - Add `DATABASE_URL` (your Neon pooled connection string).
+   - Add `JWT_SECRET` (e.g. `openssl rand -hex 32`).
+   - Add `NODE_ENV=production`.
+4. **Deploy**:
+   - Click **Deploy**.
+   - Vercel builds the frontend to `frontend/dist` and provisions `api/index.js` as the serverless API.
+5. **Verify**:
+   - Navigate to `https://your-deployment.vercel.app/health` → verify `{ "status": "ok" }`.
+   - Open the web app, register an account, create and complete a quest, and explore the 3D world.

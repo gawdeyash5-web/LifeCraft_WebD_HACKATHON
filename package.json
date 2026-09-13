@@ -2,14 +2,27 @@
   "name": "lifecraft",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "description": "LifeCraft - Gamified Real-Life Productivity RPG with 3D World Visualization",
   "scripts": {
+    "build": "npm run build --prefix frontend",
+    "build:frontend": "npm run build --prefix frontend",
     "install:all": "npm install && npm install --prefix backend && npm install --prefix frontend",
     "dev": "concurrently -n \"BACKEND,FRONTEND\" -c \"cyan,magenta\" \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:backend": "npm run dev --prefix backend",
     "dev:frontend": "npm run dev --prefix frontend",
+    "start": "npm run start --prefix backend",
     "start:backend": "npm run start --prefix backend",
-    "build:frontend": "npm run build --prefix frontend"
+    "db:init": "node backend/src/database/init.js"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.5.8",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.12.0"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

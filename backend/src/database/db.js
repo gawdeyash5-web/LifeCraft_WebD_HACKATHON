@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { PGlite } from '@electric-sql/pglite';
+import { schemaSql } from './schema.js';
 
 dotenv.config();
 
@@ -13,59 +14,71 @@ const __dirname = path.dirname(__filename);
 const { Pool } = pg;
 
 let activeEngine = null; // 'postgres' | 'pglite'
-let pgPool = null;
+let pgPool = globalThis.__lifecraft_pool || null;
 let pgliteDb = null;
-
-// Ensure persistent storage directory exists for PGlite
-const dataDir = path.resolve(__dirname, '../../data');
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
-}
-const pgliteDir = path.join(dataDir, 'lifecraft_pg');
+let isSchemaInitialized = globalThis.__lifecraft_schema_initialized || false;
+let initPromise = null;
 
 /**
  * Initialize and verify database engine.
- * First tries native PostgreSQL; falls back to embedded WASM PostgreSQL (PGlite)
- * with full disk persistence, transactions, and SQL compatibility.
+ * Production: Strictly uses Neon/hosted PostgreSQL via DATABASE_URL with connection pooling.
+ * Local Development: Falls back to embedded PGlite if DATABASE_URL is unset.
  */
 async function getEngine() {
-  if (activeEngine) return activeEngine;
+  if (activeEngine && (pgPool || pgliteDb)) return activeEngine;
 
   const isProduction = process.env.NODE_ENV === 'production';
   const databaseUrl = process.env.DATABASE_URL;
 
-  // 1. Hosted/Native PostgreSQL (Required in production or when DATABASE_URL is provided)
+  // 1. Hosted PostgreSQL (Neon / Production)
   if (databaseUrl || isProduction) {
     if (!databaseUrl) {
-      const err = new Error('[Database] FATAL: DATABASE_URL is not set in production. Hosted PostgreSQL is required.');
+      const err = new Error('[Database] FATAL: DATABASE_URL is not set in production. Neon PostgreSQL is required.');
       console.error(err.message);
       throw err;
     }
 
-    try {
-      const isLocalHost = databaseUrl.includes('localhost') || databaseUrl.includes('127.0.0.1');
-      const poolConfig = {
-        connectionString: databaseUrl,
-        connectionTimeoutMillis: 10000,
-        ssl: isLocalHost ? false : { rejectUnauthorized: false },
-      };
+    if (!pgPool) {
+      try {
+        const isLocalHost = databaseUrl.includes('localhost') || databaseUrl.includes('127.0.0.1');
+        const poolConfig = {
+          connectionString: databaseUrl,
+          max: process.env.DB_POOL_MAX ? parseInt(process.env.DB_POOL_MAX, 10) : 10,
+          idleTimeoutMillis: 30000,
+          connectionTimeoutMillis: 10000,
+          ssl: isLocalHost ? false : { rejectUnauthorized: false },
+        };
 
-      const testPool = new Pool(poolConfig);
-      const res = await testPool.query('SELECT NOW()');
-      pgPool = testPool;
-      activeEngine = 'postgres';
-      console.log('[Database] Connected to hosted PostgreSQL (Railway) at:', res.rows[0].now);
-      return 'postgres';
-    } catch (err) {
-      console.error('[Database] Critical error connecting to hosted PostgreSQL via DATABASE_URL:', err.message);
-      // In production or when DATABASE_URL is explicitly configured, never fall back to ephemeral local PGlite
-      throw err;
+        pgPool = new Pool(poolConfig);
+        globalThis.__lifecraft_pool = pgPool;
+
+        pgPool.on('error', (poolErr) => {
+          console.error('[Database] Idle client error on PostgreSQL pool:', poolErr.message);
+        });
+
+        // Test connectivity
+        const res = await pgPool.query('SELECT NOW()');
+        console.log('[Database] Connected to PostgreSQL (Neon) at:', res.rows[0].now);
+      } catch (err) {
+        console.error('[Database] Critical error connecting to hosted PostgreSQL via DATABASE_URL:', err.message);
+        // In production, never fall back to ephemeral local PGlite
+        throw err;
+      }
     }
+
+    activeEngine = 'postgres';
+    return 'postgres';
   }
 
   // 2. Local Development Fallback: Embedded PGlite
   try {
     console.log('[Database] No production DATABASE_URL configured. Initializing embedded PostgreSQL (PGlite)...');
+
+    const dataDir = path.resolve(__dirname, '../../data');
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+    const pgliteDir = path.join(dataDir, 'lifecraft_pg');
 
     // Clean up stale lock/pid file if previous process was terminated
     const pidFile = path.join(pgliteDir, 'postmaster.pid');
@@ -74,7 +87,7 @@ async function getEngine() {
         fs.unlinkSync(pidFile);
         console.log('[Database] Cleared stale postmaster.pid lock file.');
       } catch (e) {
-        // Ignore if unable to unlink
+        // Ignore if locked
       }
     }
 
@@ -99,14 +112,12 @@ async function getEngine() {
 
 /**
  * Standard Query Helper
- * Usage: const { rows } = await query('SELECT * FROM users WHERE id = $1', [userId]);
  */
 export const query = async (text, params = []) => {
   const engine = await getEngine();
   if (engine === 'postgres') {
     return await pgPool.query(text, params);
   } else {
-    // PGlite query
     const res = await pgliteDb.query(text, params);
     return {
       rows: res.rows || [],
@@ -117,14 +128,12 @@ export const query = async (text, params = []) => {
 
 /**
  * Transaction / Client Acquisition Helper
- * Provides standard pg.Client interface across both native PG and embedded PGlite.
  */
 export const getClient = async () => {
   const engine = await getEngine();
   if (engine === 'postgres') {
     return await pgPool.connect();
   } else {
-    // Return wrapped PGlite client supporting BEGIN / COMMIT / ROLLBACK transactions
     return {
       query: async (text, params = []) => {
         const res = await pgliteDb.query(text, params);
@@ -138,7 +147,6 @@ export const getClient = async () => {
   }
 };
 
-// Export pool wrapper for backward compatibility with existing code
 export const pool = {
   query: (text, params) => query(text, params),
   connect: () => getClient(),
@@ -150,13 +158,11 @@ export const pool = {
  */
 async function deduplicateAndEnforceItemConstraints() {
   try {
-    // 1. Check if items table exists
     const checkTable = await query(
       "SELECT table_name FROM information_schema.tables WHERE table_name = 'items'"
     );
     if (checkTable.rows.length === 0) return;
 
-    // 2. Query all existing items ordered by asset_key and creation date
     const itemsRes = await query(
       'SELECT id, asset_key as "assetKey" FROM items ORDER BY asset_key ASC, created_at ASC'
     );
@@ -174,7 +180,6 @@ async function deduplicateAndEnforceItemConstraints() {
     if (duplicates.length > 0) {
       console.log(`[Database] Deduplicating ${duplicates.length} duplicate cosmetic item rows...`);
       for (const { duplicateId, canonicalId } of duplicates) {
-        // Find any user inventories pointing to this duplicate item
         const invRows = await query(
           'SELECT id, user_id as "userId" FROM inventories WHERE item_id = $1',
           [duplicateId]
@@ -185,20 +190,16 @@ async function deduplicateAndEnforceItemConstraints() {
             [inv.userId, canonicalId]
           );
           if (existing.rows.length > 0) {
-            // User already has an inventory row for the canonical item
             await query('DELETE FROM inventories WHERE id = $1', [inv.id]);
           } else {
-            // Remap to canonical item
             await query('UPDATE inventories SET item_id = $1 WHERE id = $2', [canonicalId, inv.id]);
           }
         }
-        // Delete the duplicate item row
         await query('DELETE FROM items WHERE id = $1', [duplicateId]);
       }
       console.log('[Database] Item deduplication complete. Exactly 1 canonical row per asset_key.');
     }
 
-    // 3. Enforce UNIQUE index on items(asset_key)
     await query('CREATE UNIQUE INDEX IF NOT EXISTS idx_items_asset_key ON items(asset_key)');
   } catch (err) {
     console.warn('[Database] Item deduplication notice:', err.message);
@@ -206,28 +207,23 @@ async function deduplicateAndEnforceItemConstraints() {
 }
 
 /**
- * Initialize database tables and initial seed from schema.sql
+ * Idempotent schema initialization
  */
 export const initDatabaseSchema = async () => {
   try {
     await getEngine();
-
-    // Reconcile and clean any legacy duplicate items before running schema
     await deduplicateAndEnforceItemConstraints();
 
-    const schemaPath = path.join(__dirname, 'schema.sql');
-    let sql = fs.readFileSync(schemaPath, 'utf8');
-
     if (activeEngine === 'postgres') {
-      await pgPool.query(sql);
+      await pgPool.query(schemaSql);
     } else {
-      await pgliteDb.exec(sql);
+      await pgliteDb.exec(schemaSql);
     }
 
-    // Guarantee unique index exists post-schema execution
     await query('CREATE UNIQUE INDEX IF NOT EXISTS idx_items_asset_key ON items(asset_key)');
-
-    console.log('[Database] Production schema verified and initialized.');
+    console.log('[Database] Database schema verified and initialized.');
+    isSchemaInitialized = true;
+    globalThis.__lifecraft_schema_initialized = true;
     return true;
   } catch (err) {
     console.error('[Database] Failed to initialize schema:', err.message);
@@ -236,12 +232,49 @@ export const initDatabaseSchema = async () => {
 };
 
 /**
+ * Serverless-Safe Lazy Database Initialization
+ * Does NOT execute schema/seeds on every request.
+ * Checks if tables already exist; only runs initialization once per cold start if uninitialized.
+ */
+export const ensureDbInitialized = async () => {
+  if (isSchemaInitialized) return true;
+  if (initPromise) return initPromise;
+
+  initPromise = (async () => {
+    await getEngine();
+
+    // Fast check: if items table already exists with data, skip full schema execution
+    try {
+      const check = await query(
+        "SELECT COUNT(*)::int as count FROM information_schema.tables WHERE table_name = 'items'"
+      );
+      if (check.rows[0]?.count > 0) {
+        const rowCheck = await query('SELECT COUNT(*)::int as count FROM items');
+        if (rowCheck.rows[0]?.count > 0) {
+          isSchemaInitialized = true;
+          globalThis.__lifecraft_schema_initialized = true;
+          return true;
+        }
+      }
+    } catch (probeErr) {
+      // Table does not exist, run full initialization
+    }
+
+    await initDatabaseSchema();
+    isSchemaInitialized = true;
+    globalThis.__lifecraft_schema_initialized = true;
+    return true;
+  })();
+
+  return initPromise;
+};
+
+/**
  * Check database connection status on startup
  */
 export const checkDbConnection = async () => {
   try {
-    await getEngine();
-    await initDatabaseSchema();
+    await ensureDbInitialized();
     return true;
   } catch (err) {
     console.error('[Database] Database check failed:', err.message);
