@@ -2,7 +2,21 @@
  * Centralized API Service for LIFECRAFT Frontend
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
+const rawApiUrl = import.meta.env.VITE_API_URL;
+let resolvedApiUrl = '';
+
+if (rawApiUrl) {
+  const trimmed = rawApiUrl.trim().replace(/\/+$/, '');
+  resolvedApiUrl = trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
+} else if (import.meta.env.PROD) {
+  // In production if VITE_API_URL is omitted, use relative path
+  resolvedApiUrl = '/api';
+} else {
+  // Development-only fallback when running Vite dev server locally without .env
+  resolvedApiUrl = 'http://localhost:5000/api';
+}
+
+const API_BASE_URL = resolvedApiUrl;
 
 /**
  * Common fetch wrapper with JSON parsing and error handling

@@ -31,24 +31,63 @@ const pgliteDir = path.join(dataDir, 'lifecraft_pg');
 async function getEngine() {
   if (activeEngine) return activeEngine;
 
-  // 1. Try external PostgreSQL connection
-  try {
-    const testPool = new Pool({
-      connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/lifecraft',
-      connectionTimeoutMillis: 1500,
-    });
-    const res = await testPool.query('SELECT NOW()');
-    pgPool = testPool;
-    activeEngine = 'postgres';
-    console.log('[Database] Connected to external PostgreSQL at:', res.rows[0].now);
-    return 'postgres';
-  } catch (err) {
-    console.log('[Database] External PostgreSQL unavailable. Initializing embedded PostgreSQL (PGlite)...');
+  const isProduction = process.env.NODE_ENV === 'production';
+  const databaseUrl = process.env.DATABASE_URL;
+
+  // 1. Hosted/Native PostgreSQL (Required in production or when DATABASE_URL is provided)
+  if (databaseUrl || isProduction) {
+    if (!databaseUrl) {
+      const err = new Error('[Database] FATAL: DATABASE_URL is not set in production. Hosted PostgreSQL is required.');
+      console.error(err.message);
+      throw err;
+    }
+
+    try {
+      const isLocalHost = databaseUrl.includes('localhost') || databaseUrl.includes('127.0.0.1');
+      const poolConfig = {
+        connectionString: databaseUrl,
+        connectionTimeoutMillis: 10000,
+        ssl: isLocalHost ? false : { rejectUnauthorized: false },
+      };
+
+      const testPool = new Pool(poolConfig);
+      const res = await testPool.query('SELECT NOW()');
+      pgPool = testPool;
+      activeEngine = 'postgres';
+      console.log('[Database] Connected to hosted PostgreSQL (Railway) at:', res.rows[0].now);
+      return 'postgres';
+    } catch (err) {
+      console.error('[Database] Critical error connecting to hosted PostgreSQL via DATABASE_URL:', err.message);
+      // In production or when DATABASE_URL is explicitly configured, never fall back to ephemeral local PGlite
+      throw err;
+    }
   }
 
-  // 2. Fall back to embedded PGlite
+  // 2. Local Development Fallback: Embedded PGlite
   try {
-    pgliteDb = new PGlite(pgliteDir);
+    console.log('[Database] No production DATABASE_URL configured. Initializing embedded PostgreSQL (PGlite)...');
+
+    // Clean up stale lock/pid file if previous process was terminated
+    const pidFile = path.join(pgliteDir, 'postmaster.pid');
+    if (fs.existsSync(pidFile)) {
+      try {
+        fs.unlinkSync(pidFile);
+        console.log('[Database] Cleared stale postmaster.pid lock file.');
+      } catch (e) {
+        // Ignore if unable to unlink
+      }
+    }
+
+    try {
+      pgliteDb = new PGlite(pgliteDir);
+      await pgliteDb.waitReady;
+    } catch (openErr) {
+      console.warn('[Database] Local PGlite store corrupted or unrecovered. Rebuilding local development store...');
+      fs.rmSync(pgliteDir, { recursive: true, force: true });
+      pgliteDb = new PGlite(pgliteDir);
+      await pgliteDb.waitReady;
+    }
+
     activeEngine = 'pglite';
     console.log(`[Database] Embedded PostgreSQL (PGlite) active. Data directory: ${pgliteDir}`);
     return 'pglite';

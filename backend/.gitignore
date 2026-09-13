@@ -1,0 +1,13 @@
+# Dependencies
+node_modules/
+
+# Local database directory
+data/
+
+# Local env files
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
