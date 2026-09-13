@@ -106,11 +106,76 @@ export const pool = {
 };
 
 /**
+ * Ensures the items table has exactly one canonical row per cosmetic asset_key
+ * and enforces uniqueness so duplicate items can never re-occur.
+ */
+async function deduplicateAndEnforceItemConstraints() {
+  try {
+    // 1. Check if items table exists
+    const checkTable = await query(
+      "SELECT table_name FROM information_schema.tables WHERE table_name = 'items'"
+    );
+    if (checkTable.rows.length === 0) return;
+
+    // 2. Query all existing items ordered by asset_key and creation date
+    const itemsRes = await query(
+      'SELECT id, asset_key as "assetKey" FROM items ORDER BY asset_key ASC, created_at ASC'
+    );
+
+    const seen = new Map();
+    const duplicates = [];
+    for (const row of itemsRes.rows) {
+      if (!seen.has(row.assetKey)) {
+        seen.set(row.assetKey, row.id);
+      } else {
+        duplicates.push({ duplicateId: row.id, canonicalId: seen.get(row.assetKey) });
+      }
+    }
+
+    if (duplicates.length > 0) {
+      console.log(`[Database] Deduplicating ${duplicates.length} duplicate cosmetic item rows...`);
+      for (const { duplicateId, canonicalId } of duplicates) {
+        // Find any user inventories pointing to this duplicate item
+        const invRows = await query(
+          'SELECT id, user_id as "userId" FROM inventories WHERE item_id = $1',
+          [duplicateId]
+        );
+        for (const inv of invRows.rows) {
+          const existing = await query(
+            'SELECT id FROM inventories WHERE user_id = $1 AND item_id = $2',
+            [inv.userId, canonicalId]
+          );
+          if (existing.rows.length > 0) {
+            // User already has an inventory row for the canonical item
+            await query('DELETE FROM inventories WHERE id = $1', [inv.id]);
+          } else {
+            // Remap to canonical item
+            await query('UPDATE inventories SET item_id = $1 WHERE id = $2', [canonicalId, inv.id]);
+          }
+        }
+        // Delete the duplicate item row
+        await query('DELETE FROM items WHERE id = $1', [duplicateId]);
+      }
+      console.log('[Database] Item deduplication complete. Exactly 1 canonical row per asset_key.');
+    }
+
+    // 3. Enforce UNIQUE index on items(asset_key)
+    await query('CREATE UNIQUE INDEX IF NOT EXISTS idx_items_asset_key ON items(asset_key)');
+  } catch (err) {
+    console.warn('[Database] Item deduplication notice:', err.message);
+  }
+}
+
+/**
  * Initialize database tables and initial seed from schema.sql
  */
 export const initDatabaseSchema = async () => {
   try {
     await getEngine();
+
+    // Reconcile and clean any legacy duplicate items before running schema
+    await deduplicateAndEnforceItemConstraints();
+
     const schemaPath = path.join(__dirname, 'schema.sql');
     let sql = fs.readFileSync(schemaPath, 'utf8');
 
@@ -119,6 +184,10 @@ export const initDatabaseSchema = async () => {
     } else {
       await pgliteDb.exec(sql);
     }
+
+    // Guarantee unique index exists post-schema execution
+    await query('CREATE UNIQUE INDEX IF NOT EXISTS idx_items_asset_key ON items(asset_key)');
+
     console.log('[Database] Production schema verified and initialized.');
     return true;
   } catch (err) {

@@ -14,6 +14,8 @@ import CloseButton from './components/CloseButton';
 import { INITIAL_PLAYER_STATE } from './utils/contracts';
 import useRealmLevels from './features/world/hooks/useRealmLevels';
 import { Api } from './services/api';
+import DeveloperPasscodeModal from './features/developer/DeveloperPasscodeModal';
+import DeveloperViewModal from './features/developer/DeveloperViewModal';
 
 /**
  * LIFECRAFT Root Application Layout
@@ -42,6 +44,15 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('home'); // 'home' | 'quests' | 'inventory' | 'shop' | 'stats' | 'achievements' | 'events'
   const [activeRegion, setActiveRegion] = useState(null); // Starts in central plaza home overview
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+
+  // Developer View & Visual Preview State (Decoupled from real progression)
+  const [isDevPasscodeOpen, setIsDevPasscodeOpen] = useState(false);
+  const [isDeveloperViewOpen, setIsDeveloperViewOpen] = useState(false);
+  const [devPreview, setDevPreview] = useState({
+    active: false,
+    levels: { mind: null, body: null, craft: null },
+    expansions: { mind_library: null, body_coliseum: null, craft_foundry: null },
+  });
 
   // Hydrate user profile, realm levels, equipped cosmetics, and mastery expansions from backend
   const hydratePlayerProfile = useCallback(async () => {
@@ -175,6 +186,69 @@ export default function App() {
     hydratePlayerProfile();
   };
 
+  // Developer View Handlers (Isolated visual simulation)
+  const handleOpenDeveloperView = () => {
+    setIsDevPasscodeOpen(true);
+  };
+
+  const handlePasscodeSuccess = () => {
+    setIsDeveloperViewOpen(true);
+  };
+
+  const handleUpdatePreviewLevel = (realm, level) => {
+    setDevPreview((prev) => ({
+      ...prev,
+      active: true,
+      levels: {
+        ...prev.levels,
+        [realm]: level,
+      },
+    }));
+  };
+
+  const handleTogglePreviewExpansion = (expansionKey, unlocked) => {
+    setDevPreview((prev) => ({
+      ...prev,
+      active: true,
+      expansions: {
+        ...prev.expansions,
+        [expansionKey]: unlocked,
+      },
+    }));
+  };
+
+  const handleResetPreview = () => {
+    setDevPreview({
+      active: false,
+      levels: { mind: null, body: null, craft: null },
+      expansions: { mind_library: null, body_coliseum: null, craft_foundry: null },
+    });
+  };
+
+  // Compute Effective Realm Levels (Real Authoritative vs Developer Preview)
+  const effectiveRealmLevels = devPreview.active
+    ? {
+        mind: devPreview.levels.mind ?? realmLevels.mind ?? 1,
+        body: devPreview.levels.body ?? realmLevels.body ?? 1,
+        craft: devPreview.levels.craft ?? realmLevels.craft ?? 1,
+      }
+    : realmLevels;
+
+  // Compute Effective Mastery Expansions (Real Authoritative vs Developer Preview)
+  const effectiveMasteryExpansions = (() => {
+    if (!devPreview.active) return masteryExpansions;
+    let list = [...masteryExpansions];
+    ['mind_library', 'body_coliseum', 'craft_foundry'].forEach((key) => {
+      const override = devPreview.expansions[key];
+      if (override === true && !list.includes(key)) {
+        list.push(key);
+      } else if (override === false) {
+        list = list.filter((k) => k !== key);
+      }
+    });
+    return list;
+  })();
+
   // Keyboard Escape listener to close open modal panels
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -204,11 +278,11 @@ export default function App() {
           <WorldCanvas
             activeRegion={activeRegion}
             onSelectRegion={handleSelectRegion}
-            realmLevels={realmLevels}
+            realmLevels={effectiveRealmLevels}
             equippedSkin={equippedCosmetics.skin}
             equippedPet={equippedCosmetics.pet}
             equippedDecor={equippedCosmetics.decor}
-            masteryExpansions={masteryExpansions}
+            masteryExpansions={effectiveMasteryExpansions}
           />
         </div>
 
@@ -216,6 +290,7 @@ export default function App() {
         <SidebarNav
           activeTab={activeTab}
           onTabSelect={setActiveTab}
+          onOpenDeveloperView={handleOpenDeveloperView}
         />
 
         {/* 4. Floating Right Panel: Today's Quests & Player Stats */}
@@ -266,6 +341,7 @@ export default function App() {
                 {activeTab === 'stats' && (
                   <PlayerStatsPlaceholder
                     player={player}
+                    onOpenDeveloperView={handleOpenDeveloperView}
                   />
                 )}
                 {activeTab === 'quests' && (
@@ -296,6 +372,25 @@ export default function App() {
           isOpen={isAuthModalOpen}
           onClose={() => setIsAuthModalOpen(false)}
           onAuthSuccess={handleAuthSuccess}
+        />
+
+        {/* Developer View Passcode Challenge Modal */}
+        <DeveloperPasscodeModal
+          isOpen={isDevPasscodeOpen}
+          onClose={() => setIsDevPasscodeOpen(false)}
+          onSuccess={handlePasscodeSuccess}
+        />
+
+        {/* Protected Developer View Inspector */}
+        <DeveloperViewModal
+          isOpen={isDeveloperViewOpen}
+          onClose={() => setIsDeveloperViewOpen(false)}
+          realRealmLevels={realmLevels}
+          realMasteryExpansions={masteryExpansions}
+          previewState={devPreview}
+          onUpdatePreviewLevel={handleUpdatePreviewLevel}
+          onTogglePreviewExpansion={handleTogglePreviewExpansion}
+          onResetPreview={handleResetPreview}
         />
       </div>
     </div>

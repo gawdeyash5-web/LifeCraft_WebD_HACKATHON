@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Award, Flame, Brain, Dumbbell, Sparkles, Compass, Target, UserCheck, LogIn, LogOut, RefreshCw, Globe } from 'lucide-react';
+import { Award, Flame, Brain, Dumbbell, Sparkles, Compass, Target, UserCheck, LogIn, LogOut, RefreshCw, Globe, Code2 } from 'lucide-react';
 import { Api } from '../../services/api';
 import AuthModal from './AuthModal';
 
@@ -8,7 +8,7 @@ import AuthModal from './AuthModal';
  * 
  * Displays Level, XP progress bar, Streak counter, and RPG Attributes.
  */
-export default function PlayerStatsPlaceholder({ player: fallbackPlayer }) {
+export default function PlayerStatsPlaceholder({ player: fallbackPlayer, onOpenDeveloperView }) {
   const [profile, setProfile] = useState(fallbackPlayer || {});
   const [loading, setLoading] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -199,6 +199,20 @@ export default function PlayerStatsPlaceholder({ player: fallbackPlayer }) {
         <Sparkles className="w-3 h-3 text-indigo-400" />
         <span>Personal Attributes &bull; Real-time progression synchronization</span>
       </div>
+
+      {/* Developer View Access Trigger */}
+      {onOpenDeveloperView && (
+        <div className="pt-2 border-t border-slate-800/40 flex items-center justify-center">
+          <button
+            type="button"
+            onClick={onOpenDeveloperView}
+            className="text-[11px] font-mono text-slate-500 hover:text-amber-400 flex items-center space-x-1.5 transition py-1 px-2.5 rounded-lg hover:bg-slate-800/50"
+          >
+            <Code2 className="w-3.5 h-3.5" />
+            <span>Developer View</span>
+          </button>
+        </div>
+      )}
 
       {/* Auth Modal */}
       <AuthModal

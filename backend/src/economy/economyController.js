@@ -109,10 +109,12 @@ export const buyItem = async (req, res, next) => {
       );
     }
 
-    // 3. Prevent duplicate ownership
+    // 3. Prevent duplicate ownership by item_id or canonical asset_key
     const existingOwnership = await client.query(
-      `SELECT id FROM inventories WHERE user_id = $1 AND item_id = $2`,
-      [userId, item.id]
+      `SELECT inv.id FROM inventories inv
+       JOIN items i ON inv.item_id = i.id
+       WHERE inv.user_id = $1 AND (inv.item_id = $2 OR i.asset_key = $3)`,
+      [userId, item.id, item.assetKey]
     );
 
     if (existingOwnership.rows.length > 0) {

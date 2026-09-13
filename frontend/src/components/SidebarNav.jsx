@@ -7,7 +7,7 @@ import { Home, ScrollText, Backpack, Store, BarChart2, Award } from 'lucide-reac
  * Directly matches the reference design:
  * Clean vertical glassmorphic pill menu framing the left of the 3D world.
  */
-export default function SidebarNav({ activeTab, onTabSelect }) {
+export default function SidebarNav({ activeTab, onTabSelect, onOpenDeveloperView }) {
   const navItems = [
     { id: 'home', label: 'Home', icon: Home, isHome: true },
     { id: 'quests', label: 'Quests', icon: ScrollText },
@@ -46,9 +46,21 @@ export default function SidebarNav({ activeTab, onTabSelect }) {
         <p className="text-[11px] italic font-serif text-slate-300 leading-relaxed">
           "A Better You In A Bigger World"
         </p>
-        <span className="block text-[9px] uppercase tracking-wider text-slate-500 mt-1 font-semibold">
-          LIFECRAFT
-        </span>
+        <div className="flex items-center justify-between mt-1 pt-1 border-t border-slate-800/50">
+          <span className="block text-[9px] uppercase tracking-wider text-slate-500 font-semibold">
+            LIFECRAFT
+          </span>
+          {onOpenDeveloperView && (
+            <button
+              type="button"
+              onClick={onOpenDeveloperView}
+              title="Developer View"
+              className="text-[9px] font-mono text-slate-600 hover:text-amber-400 transition"
+            >
+              [dev]
+            </button>
+          )}
+        </div>
       </div>
     </aside>
   );

@@ -69,7 +69,7 @@ CREATE TABLE IF NOT EXISTS items (
     slot VARCHAR(30) NOT NULL, -- 'skin' | 'pet' | 'decor' | 'theme'
     price INTEGER NOT NULL,
     region_target VARCHAR(50), -- 'mind' | 'body' | 'craft' | 'avatar' | 'world'
-    asset_key VARCHAR(100) NOT NULL, -- Key used by 3D canvas to mount model
+    asset_key VARCHAR(100) UNIQUE NOT NULL, -- Canonical unique key used by 3D canvas to mount model
     rarity VARCHAR(20) DEFAULT 'rare', -- 'common' | 'rare' | 'epic' | 'legendary'
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -138,7 +138,14 @@ VALUES
   ('Banners of Valor', 'Crimson heraldic banners mounted along realm bridges.', 'decor', 'decor', 40, 'body', 'banner-red', 'rare'),
   ('Academy Lore Banners', 'Emerald knowledge crests decorating the Mind sanctuary.', 'decor', 'decor', 40, 'mind', 'banner-green', 'rare'),
   ('Artisan Market Stall', 'A vibrant trade stall showcasing engineering inventions.', 'decor', 'decor', 55, 'craft', 'stall-red', 'rare')
-ON CONFLICT DO NOTHING;
+ON CONFLICT (asset_key) DO UPDATE SET
+  name = EXCLUDED.name,
+  description = EXCLUDED.description,
+  category = EXCLUDED.category,
+  slot = EXCLUDED.slot,
+  price = EXCLUDED.price,
+  region_target = EXCLUDED.region_target,
+  rarity = EXCLUDED.rarity;
 
 -- ============================================================
 -- Seed Achievements Catalog

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { ShoppingBag, Coins, Sparkles, Package, Check, AlertCircle, RefreshCw, Layers, Shield, Wand2, Trees } from 'lucide-react';
 import { Api } from '../../services/api';
 
@@ -39,10 +39,17 @@ export default function ShopPlaceholder({
     setFeedback(null);
 
     try {
-      // 1. Fetch live catalog
+      // 1. Fetch live catalog with canonical deduplication
       const items = await Api.economy.getItems();
       if (Array.isArray(items) && items.length > 0) {
-        setCatalog(items);
+        const seenKeys = new Set();
+        const canonicalItems = items.filter((item) => {
+          const key = item.assetKey || item.id;
+          if (seenKeys.has(key)) return false;
+          seenKeys.add(key);
+          return true;
+        });
+        setCatalog(canonicalItems);
       }
     } catch (err) {
       console.warn('[Shop] Could not load live catalog:', err.message);
@@ -52,8 +59,15 @@ export default function ShopPlaceholder({
     if (isAuthenticated) {
       try {
         const invData = await Api.economy.getInventory();
-        const items = Array.isArray(invData) ? invData : (invData?.inventory || []);
-        setInventory(items);
+        const rawItems = Array.isArray(invData) ? invData : (invData?.inventory || []);
+        const seenInv = new Set();
+        const canonicalInv = rawItems.filter((item) => {
+          const key = item.assetKey || item.itemId || item.id;
+          if (seenInv.has(key)) return false;
+          seenInv.add(key);
+          return true;
+        });
+        setInventory(canonicalInv);
       } catch (err) {
         console.warn('[Shop] Could not load live inventory:', err.message);
       }
@@ -66,9 +80,14 @@ export default function ShopPlaceholder({
     fetchEconomyData();
   }, [fetchEconomyData]);
 
-  // Check if item is already owned
-  const getOwnedInventoryItem = (itemId) => {
-    return inventory.find((inv) => inv.itemId === itemId || inv.id === itemId);
+  // Check if item is already owned by ID or canonical assetKey
+  const getOwnedInventoryItem = (item) => {
+    if (!item) return null;
+    const itemId = typeof item === 'object' ? item.id : item;
+    const assetKey = typeof item === 'object' ? item.assetKey : null;
+    return inventory.find(
+      (inv) => inv.itemId === itemId || inv.id === itemId || (assetKey && inv.assetKey === assetKey)
+    );
   };
 
   const handlePurchase = async (item) => {
@@ -189,16 +208,28 @@ export default function ShopPlaceholder({
     }
   };
 
-  // Filter items
-  const filteredCatalog = catalog.filter((item) => {
-    if (categoryFilter === 'all') return true;
-    return item.category === categoryFilter || item.slot === categoryFilter;
-  });
+  // Filter items with canonical deduplication
+  const filteredCatalog = useMemo(() => {
+    const seen = new Set();
+    return catalog.filter((item) => {
+      const key = item.assetKey || item.id;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      if (categoryFilter === 'all') return true;
+      return item.category === categoryFilter || item.slot === categoryFilter;
+    });
+  }, [catalog, categoryFilter]);
 
-  const filteredInventory = inventory.filter((item) => {
-    if (categoryFilter === 'all') return true;
-    return item.category === categoryFilter || item.slot === categoryFilter;
-  });
+  const filteredInventory = useMemo(() => {
+    const seen = new Set();
+    return inventory.filter((item) => {
+      const key = item.assetKey || item.itemId || item.id;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      if (categoryFilter === 'all') return true;
+      return item.category === categoryFilter || item.slot === categoryFilter;
+    });
+  }, [inventory, categoryFilter]);
 
   return (
     <div className="glass-panel p-6 rounded-2xl flex flex-col h-full space-y-4 max-h-[82vh] overflow-hidden">
@@ -322,7 +353,7 @@ export default function ShopPlaceholder({
         /* Catalog Items List */
         <div className="space-y-3 overflow-y-auto flex-1 pr-1 scrollbar-none">
           {filteredCatalog.map((item) => {
-            const ownedInv = getOwnedInventoryItem(item.id);
+            const ownedInv = getOwnedInventoryItem(item);
             const canAfford = gold >= item.price;
             const isProcessing = buyingId === item.id;
             const Icon = CATEGORY_ICONS[item.category] || Sparkles;
