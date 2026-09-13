@@ -134,19 +134,80 @@ export const WORLD_CONFIG = {
 
   // Overview Camera Settings
   camera: {
-    defaultPosition: [13.5, 12.0, 13.5],
+    defaultPosition: [14.0, 12.5, 14.0],
     defaultTarget: [0, 0.6, 0],
-    fov: 34, // Isometric compression
+    fov: 36, // Cozy diorama framing
     near: 0.1,
-    far: 120,
+    far: 140,
     transitionSpeed: 3.2,
   },
 
-  // Expanded Floating Island Diorama Base
+  // Floating Island Diorama Base
   island: {
-    radius: 11.2,
+    radius: 10.0,
     height: 1.8,
     bevelSize: 0.5,
+  },
+};
+
+/**
+ * Mastered Realm Sub-Island Architecture & Coordinates
+ * 
+ * Centralized layout parameters for the three floating mastery expansions,
+ * defining their separate island geometry, positions, materials, and
+ * bridge anchor points.
+ */
+export const SUB_ISLAND_CONFIG = {
+  mind: {
+    id: 'mind_library',
+    name: 'Celestial Library Wing',
+    realm: REALMS.MIND,
+    position: [-14.5, 0.5, -10.2],
+    rotation: [0, Math.PI * 0.35, 0],
+    scale: [1, 1, 1],
+    islandRadius: 3.4,
+    islandHeight: 1.6,
+    terrainColor: '#1e1b4b', // Arcane indigo rock
+    grassColor: '#312e81',   // Celestial purple/indigo turf
+    cliffColor: '#0f172a',
+    accentColor: '#818cf8',
+    glowColor: '#c084fc',
+    bridgeStart: [-7.8, 0.05, -5.6],
+    bridgeEnd: [-12.0, 0.45, -8.6],
+  },
+  body: {
+    id: 'body_coliseum',
+    name: 'Gladiatorial Coliseum Expansion',
+    realm: REALMS.BODY,
+    position: [-14.2, -0.3, 10.4],
+    rotation: [0, -Math.PI * 0.25, 0],
+    scale: [1, 1, 1],
+    islandRadius: 3.5,
+    islandHeight: 1.8,
+    terrainColor: '#292524', // Fortified basalt rock
+    grassColor: '#15803d',   // Arena battle turf
+    cliffColor: '#1c1917',
+    accentColor: '#34d399',
+    glowColor: '#10b981',
+    bridgeStart: [-7.6, 0.05, 5.7],
+    bridgeEnd: [-11.8, -0.25, 8.8],
+  },
+  craft: {
+    id: 'craft_foundry',
+    name: 'Foundry Expansion',
+    realm: REALMS.CRAFT,
+    position: [14.6, 0.35, 0.8],
+    rotation: [0, -Math.PI * 0.5, 0],
+    scale: [1, 1, 1],
+    islandRadius: 3.4,
+    islandHeight: 1.7,
+    terrainColor: '#3b2219', // Iron quarry rock
+    grassColor: '#78350f',   // Warm copper cobblestone / timber
+    cliffColor: '#261710',
+    accentColor: '#f59e0b',
+    glowColor: '#fbbf24',
+    bridgeStart: [7.8, 0.05, 0.5],
+    bridgeEnd: [12.2, 0.35, 0.7],
   },
 };
 

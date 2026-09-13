@@ -59,7 +59,7 @@ export default function WorldCamera({ activeRegion, realmLevels = { mind: 1, bod
       maxPolarAngle={Math.PI / 2.15} // Prevent camera from passing below ground plane
       minPolarAngle={Math.PI / 6}    // Prevent top-down flattening
       minDistance={5.0}
-      maxDistance={28.0}
+      maxDistance={36.0}
       makeDefault
     />
   );

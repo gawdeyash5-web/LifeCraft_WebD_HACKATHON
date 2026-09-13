@@ -19,6 +19,12 @@ function CharacterVisual({ skinUrl, isMoving }) {
       if (child.isMesh) {
         child.castShadow = true;
         child.receiveShadow = true;
+        if (child.material) {
+          child.material.needsUpdate = true;
+          if (child.material.map) {
+            child.material.map.needsUpdate = true;
+          }
+        }
       }
     });
   }, [scene]);
@@ -79,6 +85,12 @@ function CompanionPet({ petUrl, isMoving }) {
       if (child.isMesh) {
         child.castShadow = true;
         child.receiveShadow = true;
+        if (child.material) {
+          child.material.needsUpdate = true;
+          if (child.material.map) {
+            child.material.map.needsUpdate = true;
+          }
+        }
       }
     });
   }, [scene]);

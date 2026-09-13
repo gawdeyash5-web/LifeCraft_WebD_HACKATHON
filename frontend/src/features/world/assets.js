@@ -82,11 +82,11 @@ export const CAMPFIRE = {
 export const SKYBOX = '/assets/world/skybox/skybox-day.png';
 
 export const SKINS = {
-  default: '/assets/world/characters/character-archer.glb',
-  'character-archer': '/assets/world/characters/character-archer.glb',
-  'character-oobi': '/assets/world/characters/character-oobi.glb',
-  'character-oodi': '/assets/world/characters/character-oodi.glb',
-  'character-ooli': '/assets/world/characters/character-ooli.glb',
+  default: '/assets/world/characters/archer/character-archer.glb',
+  'character-archer': '/assets/world/characters/archer/character-archer.glb',
+  'character-oobi': '/assets/world/characters/platformer/character-oobi.glb',
+  'character-oodi': '/assets/world/characters/platformer/character-oodi.glb',
+  'character-ooli': '/assets/world/characters/platformer/character-ooli.glb',
 };
 
 export const PETS = {
