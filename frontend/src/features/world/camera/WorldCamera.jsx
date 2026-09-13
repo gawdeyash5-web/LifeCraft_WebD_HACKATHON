@@ -2,15 +2,15 @@ import React, { useRef, useEffect } from 'react';
 import { useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
-import { WORLD_CONFIG, REALMS, REALM_LEVEL_CONFIG } from '../worldConfig';
+import { WORLD_CONFIG, REALMS, REALM_LEVEL_CONFIG, SUB_ISLAND_CONFIG } from '../worldConfig';
 
 /**
  * Upgraded Isometric World Camera Controller
  * 
- * Drives the elevated miniature diorama camera.
+ * Drives the elevated diorama camera.
  * Smoothly interpolates (lerps) both camera eye position and OrbitControls target
- * when switching between Overview and specific Realms (Mind, Body, Craft),
- * and dynamically adapts framing to the size of Level 2 and Level 3 evolved structures.
+ * when switching between Overview, specific Realms (Mind, Body, Craft),
+ * and Mastery Sub-Island Expansions (Celestial Library, Coliseum, Foundry).
  */
 export default function WorldCamera({ activeRegion, realmLevels = { mind: 1, body: 1, craft: 1 } }) {
   const { camera } = useThree();
@@ -30,6 +30,13 @@ export default function WorldCamera({ activeRegion, realmLevels = { mind: 1, bod
 
       targetCamPos.current.set(...camPos);
       targetLookAt.current.set(...camTarget);
+    } else if (activeRegion && (activeRegion === 'mind_library' || activeRegion === 'body_coliseum' || activeRegion === 'craft_foundry')) {
+      const realmKey = activeRegion === 'mind_library' ? 'mind' : activeRegion === 'body_coliseum' ? 'body' : 'craft';
+      const subCfg = SUB_ISLAND_CONFIG[realmKey];
+      if (subCfg?.cameraPosition && subCfg?.cameraTarget) {
+        targetCamPos.current.set(...subCfg.cameraPosition);
+        targetLookAt.current.set(...subCfg.cameraTarget);
+      }
     } else {
       targetCamPos.current.set(...WORLD_CONFIG.camera.defaultPosition);
       targetLookAt.current.set(...WORLD_CONFIG.camera.defaultTarget);

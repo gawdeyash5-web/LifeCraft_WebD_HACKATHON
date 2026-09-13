@@ -256,6 +256,12 @@ export default function App() {
       levels: { mind: null, body: null, craft: null },
       expansions: { mind_library: null, body_coliseum: null, craft_foundry: null },
     });
+    // If player is currently focused on an expansion that was only in preview, return to main island
+    if (activeRegion && ['mind_library', 'body_coliseum', 'craft_foundry'].includes(activeRegion)) {
+      if (!masteryExpansions.includes(activeRegion)) {
+        setActiveRegion(null);
+      }
+    }
   };
 
   // Compute Effective Realm Levels (Real Authoritative vs Developer Preview)
@@ -365,7 +371,8 @@ export default function App() {
         <BottomRealmDock
           activeRegion={activeRegion}
           onSelectRegion={handleSelectRegion}
-          realmLevels={realmLevels}
+          realmLevels={effectiveRealmLevels}
+          masteryExpansions={effectiveMasteryExpansions}
           onOpenShop={() => setActiveTab('shop')}
           onOpenInventory={() => setActiveTab('inventory')}
           onOpenAchievements={() => setActiveTab('achievements')}

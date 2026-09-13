@@ -1,5 +1,6 @@
-import React, { useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
+import { Billboard, Text } from '@react-three/drei';
 import * as THREE from 'three';
 
 /**
@@ -11,12 +12,16 @@ import * as THREE from 'three';
  * - Realm-specific top terrain surface & stepping terraces
  * - Subtle floating breathing animation
  * - Glowing underside levitation core & perimeter lighting
+ * - Interactive destination waypoint landmark plaque & crystal beacon
  */
 export default function MasterySubIsland({
   config,
   children,
   floatOffset = 0,
+  isActive = false,
+  onSelect = null,
 }) {
+  const [hovered, setHovered] = useState(false);
   const {
     position = [0, 0, 0],
     rotation = [0, 0, 0],
@@ -31,6 +36,12 @@ export default function MasterySubIsland({
   } = config || {};
 
   const islandGroupRef = useRef();
+
+  useEffect(() => {
+    return () => {
+      document.body.style.cursor = 'auto';
+    };
+  }, []);
 
   // Subtle floating levitation oscillation
   useFrame((state) => {
@@ -118,6 +129,149 @@ export default function MasterySubIsland({
       {/* 8. Realm Expansion Buildings & Props Slot */}
       <group position={[0, 0.05, 0]}>
         {children}
+      </group>
+
+      {/* 9. Interactive Landmark Waypoint Marker & Destination Signage */}
+      <group
+        position={[0, 0.05, islandRadius * 0.45]}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (onSelect && config?.id) onSelect(config.id);
+        }}
+        onPointerOver={(e) => {
+          e.stopPropagation();
+          setHovered(true);
+          document.body.style.cursor = 'pointer';
+        }}
+        onPointerOut={() => {
+          setHovered(false);
+          document.body.style.cursor = 'auto';
+        }}
+      >
+        {/* Glowing Waypoint Ring & Ground Decal */}
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
+          <ringGeometry args={[0.65, 0.88, 32]} />
+          <meshBasicMaterial
+            color={accentColor}
+            transparent
+            opacity={isActive ? 0.95 : hovered ? 0.8 : 0.45}
+            side={THREE.DoubleSide}
+            blending={THREE.AdditiveBlending}
+          />
+        </mesh>
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.005, 0]}>
+          <circleGeometry args={[0.88, 32]} />
+          <meshBasicMaterial
+            color={accentColor}
+            transparent
+            opacity={isActive ? 0.35 : hovered ? 0.22 : 0.08}
+            side={THREE.DoubleSide}
+            blending={THREE.AdditiveBlending}
+          />
+        </mesh>
+
+        {/* Floating Waypoint Beacon Crystal */}
+        <group position={[0, 2.7, 0]}>
+          <mesh>
+            <octahedronGeometry args={[0.22, 0]} />
+            <meshStandardMaterial
+              color={accentColor}
+              emissive={accentColor}
+              emissiveIntensity={isActive ? 2.5 : hovered ? 2.0 : 1.2}
+              roughness={0.1}
+            />
+          </mesh>
+          <pointLight
+            color={accentColor}
+            intensity={isActive ? 3.0 : 1.5}
+            distance={5.0}
+          />
+        </group>
+
+        {/* In-World Landmark Destination Label */}
+        <Billboard position={[0, 2.15, 0]} follow={true}>
+          {/* Backplate */}
+          <mesh position={[0, 0, -0.01]}>
+            <planeGeometry args={[2.8, 0.85]} />
+            <meshStandardMaterial
+              color="#090d16"
+              roughness={0.25}
+              metalness={0.8}
+              transparent
+              opacity={0.94}
+            />
+          </mesh>
+          {/* Accent Glow Tint */}
+          <mesh position={[0, 0, -0.008]}>
+            <planeGeometry args={[2.74, 0.79]} />
+            <meshBasicMaterial
+              color={accentColor}
+              transparent
+              opacity={isActive ? 0.35 : hovered ? 0.25 : 0.15}
+            />
+          </mesh>
+          {/* Border */}
+          <lineSegments position={[0, 0, -0.004]}>
+            <edgesGeometry args={[new THREE.PlaneGeometry(2.8, 0.85)]} />
+            <lineBasicMaterial
+              color={accentColor}
+              transparent
+              opacity={isActive ? 0.95 : hovered ? 0.85 : 0.55}
+            />
+          </lineSegments>
+
+          {/* Left Icon */}
+          <Text
+            position={[-1.0, 0, 0.015]}
+            fontSize={0.26}
+            anchorX="center"
+            anchorY="middle"
+          >
+            {config?.icon || '⭐'}
+          </Text>
+
+          {/* Realm Header */}
+          <Text
+            position={[-0.65, 0.22, 0.015]}
+            fontSize={0.11}
+            color={accentColor}
+            anchorX="left"
+            anchorY="middle"
+            letterSpacing={0.1}
+            outlineWidth={0.01}
+            outlineColor="#000000"
+          >
+            {(config?.realm || 'EXPANSION').toUpperCase()}
+          </Text>
+
+          {/* Destination Landmark Title */}
+          <Text
+            position={[-0.65, 0.04, 0.015]}
+            fontSize={0.18}
+            color="#ffffff"
+            anchorX="left"
+            anchorY="middle"
+            outlineWidth={0.014}
+            outlineColor="#020617"
+            letterSpacing={0.05}
+          >
+            {config?.landmarkTitle || config?.name?.toUpperCase()}
+          </Text>
+
+          {/* Subtitle */}
+          <Text
+            position={[-0.65, -0.18, 0.015]}
+            fontSize={0.10}
+            color={isActive ? accentColor : '#94a3b8'}
+            anchorX="left"
+            anchorY="middle"
+            letterSpacing={0.06}
+            outlineWidth={0.01}
+            outlineColor="#020617"
+          >
+            {config?.landmarkSubtitle || 'MASTERED EXPANSION'}
+          </Text>
+        </Billboard>
       </group>
     </group>
   );

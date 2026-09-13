@@ -212,7 +212,11 @@ export default function WorldScene({
       <EquippedWorldDecor decorKey={equippedDecor} />
 
       {/* Mastery Expansion Zones (Library, Coliseum, Foundry) */}
-      <MasteryExpansions expansions={masteryExpansions} />
+      <MasteryExpansions
+        expansions={masteryExpansions}
+        activeRegion={activeRegion}
+        onSelectRegion={onSelectRegion}
+      />
 
       {/* 9. The Three Specialized Realms */}
       <MindRealm

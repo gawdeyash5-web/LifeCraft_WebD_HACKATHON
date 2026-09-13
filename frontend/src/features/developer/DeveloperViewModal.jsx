@@ -105,6 +105,16 @@ export default function DeveloperViewModal({
   onTogglePreviewExpansion,
   onResetPreview,
 }) {
+  React.useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const isPreviewActive = previewState.active;
@@ -161,6 +171,7 @@ export default function DeveloperViewModal({
             <button
               type="button"
               onClick={onClose}
+              aria-label="Close Developer View"
               className="p-1 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition"
             >
               <X className="w-5 h-5" />

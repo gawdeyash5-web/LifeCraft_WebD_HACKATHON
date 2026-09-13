@@ -298,7 +298,11 @@ function FoundryExpansion() {
  * Renders separate floating sub-islands and spanning bridges when unlocked
  * either genuinely by the player or temporarily through Developer Preview.
  */
-export default function MasteryExpansions({ expansions = [] }) {
+export default function MasteryExpansions({
+  expansions = [],
+  activeRegion = null,
+  onSelectRegion = null,
+}) {
   const hasMind = expansions.includes('mind_library');
   const hasBody = expansions.includes('body_coliseum');
   const hasCraft = expansions.includes('craft_foundry');
@@ -313,7 +317,12 @@ export default function MasteryExpansions({ expansions = [] }) {
             end={SUB_ISLAND_CONFIG.mind.bridgeEnd}
             type="mind"
           />
-          <MasterySubIsland config={SUB_ISLAND_CONFIG.mind} floatOffset={0}>
+          <MasterySubIsland
+            config={SUB_ISLAND_CONFIG.mind}
+            floatOffset={0}
+            isActive={activeRegion === 'mind_library'}
+            onSelect={onSelectRegion}
+          >
             <CelestialLibraryWing />
           </MasterySubIsland>
         </>
@@ -327,7 +336,12 @@ export default function MasteryExpansions({ expansions = [] }) {
             end={SUB_ISLAND_CONFIG.body.bridgeEnd}
             type="body"
           />
-          <MasterySubIsland config={SUB_ISLAND_CONFIG.body} floatOffset={1.6}>
+          <MasterySubIsland
+            config={SUB_ISLAND_CONFIG.body}
+            floatOffset={1.6}
+            isActive={activeRegion === 'body_coliseum'}
+            onSelect={onSelectRegion}
+          >
             <GladiatorialColiseumExpansion />
           </MasterySubIsland>
         </>
@@ -341,7 +355,12 @@ export default function MasteryExpansions({ expansions = [] }) {
             end={SUB_ISLAND_CONFIG.craft.bridgeEnd}
             type="craft"
           />
-          <MasterySubIsland config={SUB_ISLAND_CONFIG.craft} floatOffset={3.2}>
+          <MasterySubIsland
+            config={SUB_ISLAND_CONFIG.craft}
+            floatOffset={3.2}
+            isActive={activeRegion === 'craft_foundry'}
+            onSelect={onSelectRegion}
+          >
             <FoundryExpansion />
           </MasterySubIsland>
         </>

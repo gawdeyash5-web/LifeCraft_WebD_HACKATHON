@@ -45,4 +45,7 @@ Thumbs.db
 assets_lib/
 
 # Local database storage
-backend/data/
+backend/data/
+
+# Temporary scratch test scripts
+scratch/

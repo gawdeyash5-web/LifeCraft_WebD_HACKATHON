@@ -39,7 +39,12 @@ export default function QuestPanel({ activeRegion, onCompleteQuest, onQuestChang
   // Sync activeRegion prop from 3D world with realm filter
   useEffect(() => {
     if (activeRegion) {
-      const resolved = CATEGORY_ATTRIBUTES[activeRegion] || activeRegion;
+      let resolved = CATEGORY_ATTRIBUTES[activeRegion] || activeRegion;
+      if (typeof resolved === 'string') {
+        if (resolved.startsWith('mind')) resolved = 'mind';
+        else if (resolved.startsWith('body')) resolved = 'body';
+        else if (resolved.startsWith('craft')) resolved = 'craft';
+      }
       setRealmFilter(resolved);
     }
   }, [activeRegion]);
